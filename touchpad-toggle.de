@@ -1,0 +1,144 @@
+# ──────────────────────────────────────────────────────────────────────
+#
+# Your Laptop's Touchpad Toggle
+#
+# ──────────────────────────────────────────────────────────────────
+#
+# Purpose   Toggle touchpad enable/disable on GNOME/Wayland systems.
+#           Includes CLI management for status checks and installation.
+#           See help for overview and documentation for details.
+#
+# Author    Copyright (c) 2026 RML Tec Dev
+#           Contributions and feedback are welcome via rmltecdev@pm.me
+#
+# License   MIT License
+#
+# ──────────────────────────────────────────────────────────────────
+#
+# Localization:
+# [DE] German, generic
+#
+# Stellen Sie sicher, dass sich die Sprachdateien im selben Verzeichnis
+# wie das Skript befinden.
+#
+# ──────────────────────────────────────────────────────────────────────
+
+
+
+
+# man-page style help
+read -r -d '' MSG_HELP_TEXT <<EOF
+NAME
+    Der Touchpad-Umschalter für Ihren Laptop (Touchpad Toggle)
+
+BESCHREIBUNG
+    Aktivieren/Deaktivieren des Touchpads unter GNOME/ Wayland, um
+    versehentliche Mauszeigerbewegungen zu verhindern, die zu
+    unabsichtlicher Markierung und Überschreiben von Text führen.
+
+UMGEBUNG
+    Linux mit GNOME Desktop Umgebung und Wayland Display Server.
+
+ANFORDERUNGEN
+    Audiowiedergabe        ${AUDIO_PLAYER}
+    Touchpad aktivieren    ${TOUCHPAD_ENABLED}
+    Touchpad deaktivieren  ${TOUCHPAD_DISABLED}
+
+KONFIGURATION
+    Standard-Tastenkombination: ${KEY_BINDING}
+
+NUTZUNG
+    $(basename "$0")
+
+    OPTIONEN
+        (ohne/ungültig)    Aktuellen Status und Tastenkombination anzeigen
+        --help        Diese Hilfe anzeigen
+        --assign    Permanente Tastenkombination zuweisen
+        --reset        Eingabe-Subsystem zurücksetzen; erhöhte Privilegien erforderlich
+        --toggle    Touchpad aktivieren/deaktivieren
+        --unassign    Tastenkombination entfernen
+        --watch        $(basename "$0") überwachen; wird periodisch aktualisiert, mit Strg+C beenden
+
+AUTOR
+    Copyright (c) 2026 RML Tec Dev
+    Beiträge und Feedback sind unter rmltecdev@pm.me willkommen.
+
+HAFTUNGSAUSSCHLUSS
+    Die Nutzung erfolgt auf eigene Gefahr. Testen Sie das Skript
+    gründlich; das Touchpad Ihres Laptops kann unerwartet nicht mehr
+    reagieren.
+    Dieses Skript wird ohne jegliche Gewährleistung bereitgestellt.
+    Es handelt sich um freie Software: Sie dürfen es nach Ihren
+    Bedürfnissen anpassen und weiterverbreiten (siehe MIT-Lizenz).
+
+LIZENZ
+    Hiermit wird jeder Person, die eine Kopie dieser Software und der
+    zugehörigen Dokumentationsdateien (die „Software“) erhält,
+    unentgeltlich die Erlaubnis erteilt, die Software ohne Einschränkung
+    zu nutzen, einschließlich, aber nicht beschränkt auf das Recht,
+    Kopien der Software zu verwenden, zu kopieren, zu ändern,
+    zusammenzuführen, zu veröffentlichen, zu verbreiten,
+    unterzulizenzieren und/oder zu verkaufen, und Personen, denen die
+    Software zur Verfügung gestellt wird, dies unter den folgenden
+    Bedingungen zu gestatten:
+
+    Der obige Urheberrechtshinweis und dieser Genehmigungshinweis müssen
+    in allen Kopien oder wesentlichen Teilen der Software enthalten sein.
+
+    DIE SOFTWARE WIRD OHNE MÄNGELGEWÄHR UND OHNE JEGLICHE AUSDRÜCKLICHE
+    ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG, EINSCHLIESSLICH, ABER NICHT
+    BESCHRÄNKT AUF DIE GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, DER EIGNUNG
+    FÜR EINEN BESTIMMTEN ZWECK UND DER NICHTVERLETZUNG VON RECHTEN
+    DRITTER, BEREITGESTELLT. In keinem Fall haften die Autoren oder
+    Urheberrechtsinhaber für jegliche Ansprüche, Schäden oder sonstige
+    Haftung, ob aus Vertrag, unerlaubter Handlung oder anderweitig,
+    die sich aus oder im Zusammenhang mit der Software oder deren
+    Nutzung oder sonstigen Umgang mit der Software ergeben. (MIT-Lizenz)
+EOF
+
+# Mathematically inflate padding to align with longest string
+INFO_PAD="%-17s"
+
+# Associative array to map keys to localized strings
+MSG[assign_abort_msg]="  Dem Touchpad-Umschalter wurde bereits eine Tastenkombination zugewiesen.\n  Rufen Sie das Skript ohne Option auf, um Informationen zu erhalten."
+MSG[assign_abort_title]="Zuweisen der Tastenkombination abgebrochen."
+MSG[assign_gnome_name]="Touchpad-Umschalter"
+MSG[assign_instructions]="Falls die Tastenkombination die Funktion des Touchpads nicht beim ersten\nVersuch umschaltet, ist sie möglicherweise bereits einer anderen\nAnwendung zugewiesen. Bitte wählen Sie eine andere Tastenkombination."
+MSG[assign_preparing]="Bereite Zuweisung der Tastenkombination vor..."
+MSG[assign_success]="Tastenkombination erfolgreich zugewiesen:"
+MSG[check_assign]="Zugewiesen"
+MSG[check_invoke_hint]="Rufen Sie $(basename "$0") mit dem Option --assign auf um eine permanente Tastenkombination zuzuweisen."
+MSG[check_not_detected]="Nicht erkannt"
+MSG[check_status_label]="Tastenkombination"
+MSG[error_tool]="Erforderliche Systemkomponente nicht installiert:"
+MSG[header]="≡ Touchpad-Umschalter ≡"
+MSG[help_close]="Hilfe geschlossen."
+MSG[help_open]="Öffne Hilfe..."
+MSG[help_text]="$MSG_HELP_TEXT"
+MSG[info_desc_assign]="Weist permanente Tastenkombination zu; Voreinstellung:"
+MSG[info_desc_help]="Zeigt Beschreibung, Benutzung und Lizenz"
+MSG[info_desc_remove]="Entfernt permanente Tastenkombination"
+MSG[info_desc_reset]="Setzt Eingabe-Subsystem zurück; erhöhte Privilegien erforderlich"
+MSG[info_desc_toggle]="Aktiviert/deaktiviert das Touchpad"
+MSG[info_disabled]="Inaktiv"
+MSG[info_enabled]="Aktiv"
+MSG[info_opt_watch]="$(basename "$0") überwachen; wird periodisch aktualisiert, mit Strg+C beenden"
+MSG[info_path]="Skriptpfad"
+MSG[info_status_label]="Touchpad Status"
+MSG[info_invoke]="Rufen Sie $(basename "$0") mit einem dieser Optionen auf:"
+MSG[install_hint]="Installieren Sie die Komponente, oder das Paket, dass sie enthält,\n  mit \033[1msudo apt install"
+MSG[keyb_manager]="Tastenkombinations-Manager"
+MSG[notif_disabled]="Das Touchpad ist deaktiviert."
+MSG[notif_enabled]="Das Touchpad ist aktiviert."
+MSG[notif_title]="Touchpad Status"
+MSG[rem_found]="Tastenkombination zum Entfernen gefunden:"
+MSG[rem_not_found]="Keine Tastenkombination gefunden."
+MSG[rem_nothing]="Nichts zu entfernen."
+MSG[rem_preparing]="Bereite Entfernen der Tastenkombination vor..."
+MSG[rem_success]="Tastenkombination erfolgreich entfernt."
+MSG[reset_fail]="Zurücksetzen des Eingabe-Subsystems gescheitert."
+MSG[reset_preparing]="Setze Eingabe-Subsystem zurück..."
+MSG[reset_success]="Eingabe-Subsystem erfolgreich zurückgesetzt."
+MSG[reset_sudo_hint]="Um das Eingabe-Subsystem neu zu laden, sind erhöhte Privilegien erforderlich."
+MSG[watch_start]="Beobachte ${SCRIPT_PATH} im Interval von ${WATCH_INTERVAL} Sekunden...\n"
+MSG[watch_stop]="Beobachten beendet.\n\n"

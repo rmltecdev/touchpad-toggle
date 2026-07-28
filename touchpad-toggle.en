@@ -1,0 +1,137 @@
+# ──────────────────────────────────────────────────────────────────────
+#
+# Your Laptop's Touchpad Toggle
+#
+# ──────────────────────────────────────────────────────────────────────
+#
+# Purpose   Toggle touchpad enable/disable on GNOME/Wayland systems.
+#           Includes CLI management for status checks and installation.
+#           See help for overview and documentation for details.
+#
+# Author    Copyright (c) 2026 RML Tec Dev
+#           Contributions and feedback are welcome via rmltecdev@pm.me
+#
+# License   MIT License
+#
+# ──────────────────────────────────────────────────────────────────────
+#
+# Localization:
+# [EN] English, generic (fallback)
+#
+# Ensure language files are in same directory as script.
+#
+# ──────────────────────────────────────────────────────────────────────
+
+
+
+# man-page style help
+read -r -d '' MSG_HELP_TEXT <<EOF
+NAME
+    Your Laptop's Touchpad Toggle
+
+DESCRIPTION
+    Enable/disable touchpad to prevent accidental pointer movement,
+    causing unintended highlighting and removal of text passages.
+
+ENVIRONMENT
+    Linux with GNOME Desktop Environment and Wayland Display Server.
+
+REQUIREMENTS
+    Audio player             ${AUDIO_PLAYER}
+    Touchpad enabled sound   ${TOUCHPAD_ENABLED}
+    Touchpad disabled sound  ${TOUCHPAD_DISABLED}
+
+CONFIGURATION
+    Default key binding      ${KEY_BINDING}
+
+USAGE
+    $(basename "$0") [OPTION]
+
+    OPTIONS
+        (none/invalid)  Show current status of touchpad and keyboard shortcut
+        --assign        Assign permanent keyboard shortcut
+        --help          Show this help
+        --reset         Hard reset input drivers; elevated privileges required
+        --toggle        Toggle touchpad enable/disable
+        --unassign      Remove permanent keyboard shortcut
+        --watch         Watch $(basename "$0"); periodically updated, quit with Ctrl+C
+
+AUTHOR
+    Copyright (c) 2026 RML Tec Dev
+    Contributions and feedback are welcome via rmltecdev@pm.me
+
+DISCLAIMER
+    Use at your own risk. Test thoroughly; your laptop's touchpad may
+    stop responding unexpectedly.
+    This script is provided “as is”; there is NO WARRANTY at all. This is
+    free software: you are free to adapt it to your needs and 
+    redistribute it.
+
+LICENSE
+    Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation
+    files (the "Software"), to deal in the Software without restriction,
+    including without limitation the rights to use, copy, modify, merge,
+    publish, distribute, sublicense, and/or sell copies of the Software,
+    and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be 
+    included in all copies or substantial portions of the Software.
+ 
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+    BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+    ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE. (MIT License)
+EOF
+
+# Mathematically inflate padding to align with longest string
+INFO_PAD="%-15s"
+
+# Associative array to map keys to localized strings
+MSG[assign_abort_msg]="  A keyboard shortcut has already been assigned to toggle touchpad\n  enable/disable. Invoke script without option to see details."
+MSG[assign_abort_title]="Assigning keyboard shortcut aborted."
+MSG[assign_gnome_name]="Touchpad Toggle"
+MSG[assign_instructions]="If the keyboard shortcut does not disable and re-enable the touchpad on\nfirst attempt, the keyboard shortcut might have been already assigned to\nanother application. Please choose a different key combination."
+MSG[assign_preparing]="Assigning keyboard shortcut..."
+MSG[assign_success]="Keyboard shortcut successfully assigned to"
+MSG[check_assign]="Assigned"
+MSG[check_invoke_hint]="Invoke $(basename "$0") with option --assign to assign a permanent keyboard shortcut."
+MSG[check_not_detected]="Not detected"
+MSG[check_status_label]="Shortcut status"
+MSG[error_tool]="Required system component is not installed:"
+MSG[header]="≡ Touchpad Toggle ≡"
+MSG[help_close]="Help closed."
+MSG[help_open]="Opening help..."
+MSG[help_text]="$MSG_HELP_TEXT"
+MSG[info_desc_assign]="Assign permanent keyboard shortcut; default:"
+MSG[info_desc_help]="Show description, usage and license"
+MSG[info_desc_remove]="Remove permanent keyboard shortcut"
+MSG[info_desc_reset]="Hard reset input sub-system; elevated privileges required"
+MSG[info_desc_toggle]="Toggle touchpad enable/disable"
+MSG[info_disabled]="Disabled"
+MSG[info_enabled]="Enabled"
+MSG[info_opt_watch]="Watch $(basename "$0"); periodically updated, quit with Ctrl+C"
+MSG[info_path]="Script path"
+MSG[info_status_label]="Touchpad status"
+MSG[info_invoke]="Invoke $(basename "$0") with one of these options:"
+MSG[install_hint]="Install it, or the package providing it,\n  with \033[1msudo apt-get install"
+MSG[keyb_manager]="Keyboard Shortcut Manager"
+MSG[notif_disabled]="Touchpad is now disabled."
+MSG[notif_enabled]="Touchpad is now enabled."
+MSG[notif_title]="Touchpad status"
+MSG[rem_found]="Found shortcut to remove:"
+MSG[rem_not_found]="No shortcut found."
+MSG[rem_nothing]="Nothing to remove."
+MSG[rem_preparing]="Removing keyboard shortcut..."
+MSG[rem_success]="Shortcut successfully removed."
+MSG[reset_fail]="Resetting input subsystem failed."
+MSG[reset_preparing]="Resetting input subsystem (Hard Reset)..."
+MSG[reset_success]="Input subsystem successfully reset."
+MSG[reset_sudo_hint]="Requires elevated privileges (sudo) to reload hardware drivers.\n"
+MSG[watch_start]="Watching ${SCRIPT_PATH} with interval of ${WATCH_INTERVAL} seconds...\n"
+MSG[watch_stop]="Watching ended.\n\n"
