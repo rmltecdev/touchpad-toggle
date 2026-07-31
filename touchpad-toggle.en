@@ -11,13 +11,12 @@
 # Author    Copyright (c) 2026 RML Tec Dev
 #           Contributions and feedback are welcome via rmltecdev@pm.me
 #
-# License   MIT License
+# License   Licensed under the MIT License
 #
 # ──────────────────────────────────────────────────────────────────────
 #
 # Localization:
 # [EN] English, generic (fallback)
-#
 # Ensure language files are in same directory as script.
 #
 # ──────────────────────────────────────────────────────────────────────
@@ -61,32 +60,13 @@ AUTHOR
     Contributions and feedback are welcome via rmltecdev@pm.me
 
 DISCLAIMER
-    Use at your own risk. Test thoroughly; your laptop's touchpad may
-    stop responding unexpectedly.
-    This script is provided “as is”; there is NO WARRANTY at all. This is
-    free software: you are free to adapt it to your needs and 
-    redistribute it.
+    This script is provided “as is”; there is NO WARRANTY at all. Use at
+    your own risk. 
+    Test thoroughly; your laptop's touchpad may stop responding
+    unexpectedly.
 
 LICENSE
-    Permission is hereby granted, free of charge, to any person
-    obtaining a copy of this software and associated documentation
-    files (the "Software"), to deal in the Software without restriction,
-    including without limitation the rights to use, copy, modify, merge,
-    publish, distribute, sublicense, and/or sell copies of the Software,
-    and to permit persons to whom the Software is furnished to do so,
-    subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be 
-    included in all copies or substantial portions of the Software.
- 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-    BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-    ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE. (MIT License)
+    Licensed under the MIT License.
 EOF
 
 # Mathematically inflate padding to align with longest string

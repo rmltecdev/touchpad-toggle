@@ -18,15 +18,15 @@ Invoke touchpad-toggle with one of these options:
 ```
 
 #### Table of Contents
-- [Purpose](#purpose)
-- [Prerequisites](#prerequisites)
-- [Functionality](#functionality)
-- [Code](#code)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Troubleshooting](#troubleshooting)
-- [Help](#help)
-- [Appendix](#appendix)
+* [Purpose](#purpose)
+* [Prerequisites](#prerequisites)
+* [Functionality](#functionality)
+* [Code](#code)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Troubleshooting](#troubleshooting)
+* [Help](#help)
+* [Appendix](#appendix)
 
 ## Purpose
 
@@ -49,11 +49,11 @@ If the touchpad stops responding because hardware layer freezes, the user may ha
 
 ## Prerequisites
 
-To function correctly, the host system requires the following:
+To function correctly, the host system requires the following:  
 
 ### Operating System  
 
-* Any  [Linux](https://www.linux.org) distribution, based on [Debian](https://www.Debian.org/) or [Ubuntu](https://www.ubuntu.com/) with Bourne-again shell (v4.0 or higher recommended for associative array support) or compatible, such as [ZORIN OS](https://www.zorin.com/).
+* Any  [Linux](https://www.linux.org) distribution, based on [Debian](https://www.Debian.org/) or [Ubuntu](https://www.ubuntu.com/) with Bourne-again shell (v4.0 or higher recommended for associative array support) or compatible, such as [ZORIN OS](https://www.zorin.com/).  
 * [GNOME](https://www.gnome.org/) desktop environment, and [Wayland](https://wayland.freedesktop.org/) display driver installed and in use.  
 
 ### Dependencies  
@@ -62,13 +62,13 @@ To function correctly, the host system requires the following:
 
 * `notify-send` (libnotify-bin)  
 
-* `paplay` (PulseAudio command line utility) or a compatible audio player.
+* `paplay` (PulseAudio command line utility) or a compatible audio player.  
 
-* `realpath` (GNU coreutils)
+* `realpath` (GNU coreutils)  
 
 ## Functionality
 
-The script operates on four main functional axes:
+The script operates on four main functional axes:  
 
 1. **State Management**  
 Reads and writes the `send-events` key in the `org.gnome.desktop.peripherals.touchpad` schema.  
@@ -80,15 +80,15 @@ Self-installs by programmatically parsing and modifying the complex `custom-keyb
 Provides immediate confirmation via system notifications and distinct audible cues for "Enabled" vs "Disabled" states.  
 
 4. **Localization**  
-Automatically detects the system language (`$LANG`) and serves interface text; currently in generic English, generic German, or Thai.
+Automatically detects the system language (`$LANG`) and serves interface text; currently in generic English, generic German, or Thai.  
 
 ## Code  
 
-The script utilizes Bash scripting to interface with GNOME's `gsettings` and `dconf`. Below are key sections detailing the logic.
+The script utilizes Bash scripting to interface with GNOME's `gsettings` and `dconf`. Below are key sections detailing the logic.  
 
 ### Toggle Logic  
 
-This function handles the core purpose of the script. It uses `gsettings` to read the current state and flips it.
+This function handles the core purpose of the script. It uses `gsettings` to read the current state and flips it.  
 
 ```bash
 toggle_touchpad() {
@@ -119,7 +119,7 @@ toggle_touchpad() {
 
 ### Shortcut Assignment  
 
-This is the most complex logic. GNOME stores custom keybindings as a list of paths. The script must safely append a new path without breaking existing ones.
+This is the most complex logic. GNOME stores custom keybindings as a list of paths. The script must safely append a new path without breaking existing ones.  
 
 ```bash
 set_shortcut() {
@@ -195,21 +195,21 @@ chmod +x ~/bin/touchpad-toggle
 ```
 
 3. **Dependencies**  
-Ensure required tools are installed (example for Debian/Ubuntu):
+Ensure required tools are installed (example for Debian/Ubuntu):  
 
 ```bash
 sudo apt update
 sudo apt install libnotify-bin pulseaudio-utils
 ```
 
-Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.
+Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.  
 
 4. **Audio Files**  
 The script expects audio files at `/usr/share/sounds/zorin/stereo/`. If you are not using Zorin OS, edit the `TOUCHPAD_DISABLED` and `TOUCHPAD_ENABLED` variables in the script to point to existing `.ogg` or `.wav` files on your system.
 
 ## Usage
 
-The script is a CLI tool that accepts specific options.
+The script is a CLI tool that accepts specific options.  
 
 **Command** `./touchpad-toggle [OPTION]`
 
@@ -236,7 +236,7 @@ The script checks for `gsettings`, `notify-send`, and the audio player. Install 
 Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.
 
 2. **Audio does not play**  
-Check the `AUDIO_PLAYER` variable path and ensure the sound files defined in `TOUCHPAD_ENABLED`/`DISABLED` actually exist.
+Check the `AUDIO_PLAYER` variable path and ensure the sound files defined in `TOUCHPAD_ENABLED`/`DISABLED` actually exist.  
 
 3. **Shortcut doesn't work**  
 Invoke `./touchpad-toggle --assign` again. If it says "Assigned," check if another application is overriding `<Super>q`.  
@@ -270,7 +270,7 @@ This forces the shell to print every command and its expanded arguments to stand
     Uncommenting `set -euo pipefail` forces the script to abort immediately if any command fails (`-e`), if an undefined variable is referenced (`-u`), or if a command within a pipeline fails (`-o pipefail`). Use this strictly for debugging syntax or pathing errors.  
 
     *Note*  
-    Enabling this is useful for development but may cause the script to crash if an audio file is missing or a `gsettings` key is temporarily unavailable.
+    Enabling this is useful for development but may cause the script to crash if an audio file is missing or a `gsettings` key is temporarily unavailable.  
 
 ## Help  
 
@@ -278,7 +278,7 @@ The script includes a built-in "Man Page" style help viewer.
 
 * Invoked via: `./touchpad-toggle --help`
 * It pipes localized documentation into the `less` pager, allowing for scrolling and searching within the help text.
-* If the script is invoked with an invalid option, it defaults to `display_info`, showing a concise usage summary.
+* If the script is invoked with an invalid option, it defaults to `display_info`, showing a concise usage summary.  
 
 **Currently Implemented Localizations**  
 
@@ -292,11 +292,15 @@ The script includes a built-in "Man Page" style help viewer.
 
 ### Disclaimer  
 
-Use at your own risk. Test thoroughly; your laptop's touchpad may unexpectedly stop responding due to variations and limitations in hardware and operating system.     
+Use at your own risk. Test thoroughly; your laptop's touchpad may unexpectedly stop responding due to variations and limitations in hardware and operating system.  
 This script is provided “as is”; there is NO WARRANTY at all. This is free software: you are free to modify it to your needs and redistribute it (see MIT License).  
 Due to ongoing development, this documentation might not reflect latest minor code changes.  
   
 ### Author  
 
 Copyright (c) 2026 RML Tec Dev  
-Contributions and feedback are welcome via [rmltecdev@pm.me](mailto:rmltecdev@pm.me?subject=touchpad-toggle)  
+Contributions and feedback are welcome via [rmltecdev@pm.me](mailto:rmltecdev@pm.me?subject=Touchpad-Toggle)  
+
+### License
+
+Licensed under the MIT License — see [LICENSE](LICENSE) for details.  

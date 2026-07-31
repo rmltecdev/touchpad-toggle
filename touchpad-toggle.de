@@ -2,7 +2,7 @@
 #
 # Your Laptop's Touchpad Toggle
 #
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 #
 # Purpose   Toggle touchpad enable/disable on GNOME/Wayland systems.
 #           Includes CLI management for status checks and installation.
@@ -11,18 +11,16 @@
 # Author    Copyright (c) 2026 RML Tec Dev
 #           Contributions and feedback are welcome via rmltecdev@pm.me
 #
-# License   MIT License
+# License   Licensed under the MIT License
 #
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 #
 # Localization:
-# [DE] German, generic
-#
+# [DE] Deutsch, generiscb
 # Stellen Sie sicher, dass sich die Sprachdateien im selben Verzeichnis
 # wie das Skript befinden.
 #
 # ──────────────────────────────────────────────────────────────────────
-
 
 
 
@@ -64,36 +62,13 @@ AUTOR
     Beiträge und Feedback sind unter rmltecdev@pm.me willkommen.
 
 HAFTUNGSAUSSCHLUSS
-    Die Nutzung erfolgt auf eigene Gefahr. Testen Sie das Skript
-    gründlich; das Touchpad Ihres Laptops kann unerwartet nicht mehr
-    reagieren.
-    Dieses Skript wird ohne jegliche Gewährleistung bereitgestellt.
-    Es handelt sich um freie Software: Sie dürfen es nach Ihren
-    Bedürfnissen anpassen und weiterverbreiten (siehe MIT-Lizenz).
+    Dieses Skript wird ohne jegliche Gewährleistung bereitgestellt. Die
+    Nutzung erfolgt auf eigene Gefahr.
+    Testen Sie das Skript gründlich; das Touchpad Ihres Laptops kann 
+    unerwartet nicht mehr reagieren.
 
 LIZENZ
-    Hiermit wird jeder Person, die eine Kopie dieser Software und der
-    zugehörigen Dokumentationsdateien (die „Software“) erhält,
-    unentgeltlich die Erlaubnis erteilt, die Software ohne Einschränkung
-    zu nutzen, einschließlich, aber nicht beschränkt auf das Recht,
-    Kopien der Software zu verwenden, zu kopieren, zu ändern,
-    zusammenzuführen, zu veröffentlichen, zu verbreiten,
-    unterzulizenzieren und/oder zu verkaufen, und Personen, denen die
-    Software zur Verfügung gestellt wird, dies unter den folgenden
-    Bedingungen zu gestatten:
-
-    Der obige Urheberrechtshinweis und dieser Genehmigungshinweis müssen
-    in allen Kopien oder wesentlichen Teilen der Software enthalten sein.
-
-    DIE SOFTWARE WIRD OHNE MÄNGELGEWÄHR UND OHNE JEGLICHE AUSDRÜCKLICHE
-    ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG, EINSCHLIESSLICH, ABER NICHT
-    BESCHRÄNKT AUF DIE GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, DER EIGNUNG
-    FÜR EINEN BESTIMMTEN ZWECK UND DER NICHTVERLETZUNG VON RECHTEN
-    DRITTER, BEREITGESTELLT. In keinem Fall haften die Autoren oder
-    Urheberrechtsinhaber für jegliche Ansprüche, Schäden oder sonstige
-    Haftung, ob aus Vertrag, unerlaubter Handlung oder anderweitig,
-    die sich aus oder im Zusammenhang mit der Software oder deren
-    Nutzung oder sonstigen Umgang mit der Software ergeben. (MIT-Lizenz)
+    Lizenziert unter der MIT-Lizenz.
 EOF
 
 # Mathematically inflate padding to align with longest string

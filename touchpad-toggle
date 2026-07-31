@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 #
 # Your Laptop's Touchpad Toggle
 #
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 #
 # Purpose   Toggle touchpad enable/disable on GNOME/Wayland systems.
 #           Includes CLI management for status checks and installation.
@@ -13,17 +13,17 @@
 # Author    Copyright (c) 2026 RML Tec Dev
 #           Contributions and feedback are welcome via rmltecdev@pm.me
 #
-# License   MIT License
+# License   Licensed under the MIT License
 #
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 #
 # Ensure language files are in same directory as script.
 # Languages currently supported:
 #   - [EN] English, generic (default fallback)
-#   - [DE] German, generic 
-#   - [TH] Thai
+#   - [DE] Deutsch, generisch
+#   - [TH] ภาษาไทย
 #
-# ──────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
 
 
 
@@ -41,7 +41,7 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Configuration
-KEY_BINDING="<Super>p"
+KEY_BINDING="<Super>q"
 
 # Environment
 TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
