@@ -105,22 +105,22 @@ The default fallback language is generic English `[en]`.
 ## Installation  
 
 1. **Download**  
-Save the script file (e.g., to `~/bin/touchpad-toggle`).
+   Save the script file (e.g., to `~/bin/touchpad-toggle`) and ensure language files are saved to the same directory as script.  
 
 2. **Permissions**  
-Make the script executable:
+   Make the script executable:
 
 ```bash
 chmod +x ~/bin/touchpad-toggle
 ```
 
 3. **Dependencies**  
-Ensure required tools are installed (example for Debian/Ubuntu):  
+   Ensure required tools are installed (example for Debian/Ubuntu):  
 
 ```bash
 sudo apt update
 sudo apt install libnotify-bin pulseaudio-utils
-``` 
+```
 
 4. **Audio Configuration (Advanced)**  
 

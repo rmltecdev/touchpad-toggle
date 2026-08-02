@@ -100,22 +100,97 @@ else
     print_pass "Invalid flag exits (acceptable without GNOME session)"
 fi
 
-# ───── 6. Localization Coverage ────────────────────────────────────
+# ───── 6. Localization ─────────────────────────────────────────────
 
 echo
-echo "── Localization Coverage ──"
+echo "── Localization ──"
 
-# Extract message keys from English (fallback) file
+# Discover all localization files dynamically
+# Excludes multi-dot files like touchpad-toggle.en.bak
+mapfile -t LOCALE_FILES < <(
+    for f in "$SCRIPT_DIR"/../touchpad-toggle.*; do
+        [[ -f "$f" ]] || continue
+        [[ "$(basename "$f")" == *.*.* ]] && continue
+        basename "$f"
+    done | sort
+)
+
+if [[ ${#LOCALE_FILES[@]} -eq 0 ]]; then
+    print_fail "No localization files found"
+else
+    print_pass "${#LOCALE_FILES[@]} localization file(s) discovered"
+fi
+
+# 6a. Script-Reference Alignment (STRICTER — runs first)
+#     Extract every MSG[key] the main script actually references,
+#     then verify each key is defined in every locale file —
+#     including .en.
+mapfile -t SCRIPT_MSG_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$MAIN_SCRIPT" | sort -u)
+
+if [[ ${#SCRIPT_MSG_KEYS[@]} -eq 0 ]]; then
+    print_fail "Script references no MSG[] keys (extraction failed?)"
+else
+    print_pass "Script references ${#SCRIPT_MSG_KEYS[@]} unique MSG[] key(s)"
+fi
+
+for locale_file in "${LOCALE_FILES[@]}"; do
+    file_path="$SCRIPT_DIR/../$locale_file"
+    lang="${locale_file##*.}"
+    
+    # Extract keys defined in this locale file
+    mapfile -t LOCALE_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$file_path" | sort -u)
+    
+    # Find missing keys (in script but not in locale)
+    mapfile -t MISSING < <(comm -23 <(printf '%s\n' "${SCRIPT_MSG_KEYS[@]}") <(printf '%s\n' "${LOCALE_KEYS[@]}"))
+    
+    if [[ ${#MISSING[@]} -eq 0 ]]; then
+        print_pass ".$lang: all ${#SCRIPT_MSG_KEYS[@]} script-referenced keys present"
+    else
+        print_fail ".$lang: ${#MISSING[@]} script-referenced key(s) missing:"
+        printf "%s\n" "${MISSING[@]}" | sed 's/^/         - /'
+    fi
+done
+
+# 6b. Translation Coverage (CHECKS AGAINST FALLBACK)
+#     Use the .en fallback as the canonical key set,
+#     then verify every other locale mirrors it.
 mapfile -t EN_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$SCRIPT_DIR/../touchpad-toggle.en" | sort -u)
 
-for lang in de th; do
+if [[ ${#EN_KEYS[@]} -eq 0 ]]; then
+    print_fail "No MSG[] keys found in .en fallback file"
+else
+    print_pass ".en fallback defines ${#EN_KEYS[@]} unique key(s)"
+fi
+
+for locale_file in "${LOCALE_FILES[@]}"; do
+    file_path="$SCRIPT_DIR/../$locale_file"
+    lang="${locale_file##*.}"
+    [[ "$lang" == "en" ]] && continue
     missing=0
     for key in "${EN_KEYS[@]}"; do
-        grep -q "MSG\[$key\]" "$SCRIPT_DIR/../touchpad-toggle.$lang" || ((missing++))
+        grep -q "MSG\[$key\]" "$file_path" || ((missing++))
     done
-    [[ $missing -eq 0 ]] \
-        && print_pass ".$lang: all message keys present ($((${#EN_KEYS[@]})) keys)" \
-        || print_fail ".$lang: $missing message keys missing"
+    if [[ $missing -eq 0 ]]; then
+        print_pass ".$lang: all ${#EN_KEYS[@]} fallback key(s) present"
+    else
+        print_fail ".$lang: $missing fallback key(s) missing"
+    fi
+done
+
+# 6c. Dead Key Detection (optional but recommended)
+for locale_file in "${LOCALE_FILES[@]}"; do
+    file_path="$SCRIPT_DIR/../$locale_file"
+    lang="${locale_file##*.}"
+    
+    mapfile -t LOCALE_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$file_path" | sort -u)
+    mapfile -t ORPHANS < <(comm -23 <(printf '%s\n' "${LOCALE_KEYS[@]}") <(printf '%s\n' "${SCRIPT_MSG_KEYS[@]}"))
+    
+    if [[ ${#ORPHANS[@]} -eq 0 ]]; then
+        print_pass ".$lang: no orphan MSG[] keys"
+    else
+        print_fail ".$lang: ${#ORPHANS[@]} orphan key(s) detected:"
+        printf "     %s\n" "${ORPHANS[@]}" | sed 's/^/       - /'
+    fi
 done
 
 # ───── 7. Log Directory ─────────────────────────────────────────────
@@ -199,6 +274,27 @@ fi
 
 rm -rf "$EMPTY_PATH"
 
+# ───── 9. Default Values ────────────────────────────────────────────
+
+echo
+echo "── Default Values ──"
+
+# 9a. Verify KEY_BINDING defaults to "<Super>q"
+ACTUAL_BINDING=$(grep -E "^KEY_BINDING=" "$MAIN_SCRIPT" | sed 's/.*=//; s/["'"'"']//g')
+if [[ "$ACTUAL_BINDING" == '<Super>q' ]]; then
+    print_pass "KEY_BINDING defaults to <Super>q"
+else
+    print_fail "KEY_BINDING defaults to <Super>q (got: '$ACTUAL_BINDING')"
+fi
+
+# 9b. Verify WATCH_INTERVAL defaults to "2"
+ACTUAL_INTERVAL=$(grep -E "^WATCH_INTERVAL=" "$MAIN_SCRIPT" | sed 's/.*=//; s/["'"'"']//g')
+if [[ "$ACTUAL_INTERVAL" == "2" ]]; then
+    print_pass "WATCH_INTERVAL defaults to 2"
+else
+    print_fail "WATCH_INTERVAL defaults to 2 (got: '$ACTUAL_INTERVAL')"
+fi
+
 # ───── Summary ──────────────────────────────────────────────────────
 
 echo
@@ -210,12 +306,12 @@ echo "────────────────────────�
 echo ""
 echo "── Required Manual Tests ──"
 echo ""
-echo "   Invoke script with the following options:"
-echo "   --toggle    Observe function and audio playback."
-echo "   --assign    Observe behavior if keyboard shortcut is/isn't assigned."
-echo "   --unassign  Observe behavior if keyboard shortcut is/isn't assigned."
-echo "   --reset     Observe behavior of the input subsystem."
-echo "   --watch     Observe, if statuses are updated at runtime,"
-echo "               and the process stops on Ctrl+C."
+echo "   Invoke script with the following options and observe..."
+echo "   --toggle    ...touchpad function and audio playback."
+echo "   --assign    ...behavior if keyboard shortcut is/isn't assigned."
+echo "   --unassign  ...behavior if keyboard shortcut is/isn't assigned."
+echo "   --reset     ...behavior of the input subsystem."
+echo "   --watch     ..., if statuses are updated at runtime, and the"
+echo "               process stops on Ctrl+C."
 
 exit "$FAIL_COUNT"

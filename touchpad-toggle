@@ -49,7 +49,7 @@ TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
 TOUCHPAD_ENABLED="/usr/share/sounds/zorin/stereo/device-added.oga"
 
 # Version metadata
-VERSION="1.0.0"
+VERSION="1.0.1"
 BUILD_DATE="2026-08-02"
 
 # Environment
@@ -425,7 +425,7 @@ assign_shortcut() {
 
     # Use localized name for the GNOME Settings GUI
     gsettings set org.gnome.mutter.keybindings switch-monitor "@as []"
-    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" name "${MSG[set_gnome_name]}"
+    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" name "${SCRIPT_NAME^}"
     gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" command "${SCRIPT_PATH} --toggle"
     gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" binding "${KEY_BINDING}"
 
