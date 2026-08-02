@@ -313,5 +313,6 @@ echo "   --unassign  ...behavior if keyboard shortcut is/isn't assigned."
 echo "   --reset     ...behavior of the input subsystem."
 echo "   --watch     ..., if statuses are updated at runtime, and the"
 echo "               process stops on Ctrl+C."
+echo ""
 
 exit "$FAIL_COUNT"
