@@ -30,7 +30,7 @@ NAME
     Der Touchpad-Umschalter für Ihren Laptop (Touchpad Toggle)
 
 BESCHREIBUNG
-    Aktivieren/Deaktivieren des Touchpads unter GNOME/ Wayland, um
+    Aktivieren/Deaktivieren des Touchpads unter GNOME/Wayland, um
     versehentliche Mauszeigerbewegungen zu verhindern, die zu
     unabsichtlicher Markierung und Überschreiben von Text führen.
 
@@ -38,24 +38,26 @@ UMGEBUNG
     Linux mit GNOME Desktop Umgebung und Wayland Display Server.
 
 ANFORDERUNGEN
-    Audiowiedergabe        ${AUDIO_PLAYER}
-    Touchpad aktivieren    ${TOUCHPAD_ENABLED}
-    Touchpad deaktivieren  ${TOUCHPAD_DISABLED}
+    Audiowiedergabe (ALSA, PipeWire, PulseAudio) wird zur Laufzeit
+    erkannt. Systemklänge zum Deaktivieren und Aktivieren des Touchpads.
 
 KONFIGURATION
     Standard-Tastenkombination: ${KEY_BINDING}
 
 NUTZUNG
-    $(basename "$0")
+    ${SCRIPT_NAME} [OPTION]
 
     OPTIONEN
-        (ohne/ungültig)    Aktuellen Status und Tastenkombination anzeigen
-        --help        Diese Hilfe anzeigen
-        --assign    Permanente Tastenkombination zuweisen
-        --reset        Eingabe-Subsystem zurücksetzen; erhöhte Privilegien erforderlich
-        --toggle    Touchpad aktivieren/deaktivieren
-        --unassign    Tastenkombination entfernen
-        --watch        $(basename "$0") überwachen; wird periodisch aktualisiert, mit Strg+C beenden
+        (ohne/ungültig)  Aktuellen Status und Tastenkombination anzeigen
+        --help           Diese Hilfe anzeigen.
+        --assign         Permanente Tastenkombination zuweisen.
+        --reset          Eingabe-Subsystem zurücksetzen; erhöhte
+                         Privilegien erforderlich.
+        --toggle         Touchpad aktivieren/deaktivieren.
+        --unassign       Tastenkombination entfernen.
+        --version        Versions-Metadaten anzeigen.
+        --watch          ${SCRIPT_NAME} überwachen; wird alle ${WATCH_INTERVAL} 
+                         Sekunden aktualisiert; mit Strg+C beenden.
 
 AUTOR
     Copyright (c) 2026 RML Tec Dev
@@ -82,7 +84,7 @@ MSG[assign_instructions]="Falls die Tastenkombination die Funktion des Touchpads
 MSG[assign_preparing]="Bereite Zuweisung der Tastenkombination vor..."
 MSG[assign_success]="Tastenkombination erfolgreich zugewiesen:"
 MSG[check_assign]="Zugewiesen"
-MSG[check_invoke_hint]="Rufen Sie $(basename "$0") mit dem Option --assign auf um eine permanente Tastenkombination zuzuweisen."
+MSG[check_invoke_hint]="Rufen Sie ${SCRIPT_NAME} mit dem Option --assign auf um eine permanente Tastenkombination zuzuweisen."
 MSG[check_not_detected]="Nicht erkannt"
 MSG[check_status_label]="Tastenkombination"
 MSG[error_tool]="Erforderliche Systemkomponente nicht installiert:"
@@ -90,17 +92,20 @@ MSG[header]="≡ Touchpad-Umschalter ≡"
 MSG[help_close]="Hilfe geschlossen."
 MSG[help_open]="Öffne Hilfe..."
 MSG[help_text]="$MSG_HELP_TEXT"
+MSG[info_build_date]="Build-Datum"
 MSG[info_desc_assign]="Weist permanente Tastenkombination zu; Voreinstellung:"
 MSG[info_desc_help]="Zeigt Beschreibung, Benutzung und Lizenz"
 MSG[info_desc_remove]="Entfernt permanente Tastenkombination"
 MSG[info_desc_reset]="Setzt Eingabe-Subsystem zurück; erhöhte Privilegien erforderlich"
 MSG[info_desc_toggle]="Aktiviert/deaktiviert das Touchpad"
+MSG[info_desc_version]="Versionsinformationen anzeigen"
 MSG[info_disabled]="Inaktiv"
 MSG[info_enabled]="Aktiv"
-MSG[info_opt_watch]="$(basename "$0") überwachen; wird periodisch aktualisiert, mit Strg+C beenden"
-MSG[info_path]="Skriptpfad"
+MSG[info_opt_watch]="${SCRIPT_NAME} überwachen; wird alle ${WATCH_INTERVAL} Sekunden aktualisiert; mit Strg+C beenden"
+MSG[info_path]="Skript-Pfad"
 MSG[info_status_label]="Touchpad Status"
-MSG[info_invoke]="Rufen Sie $(basename "$0") mit einem dieser Optionen auf:"
+MSG[info_invoke]="Rufen Sie ${SCRIPT_NAME} mit einem dieser Optionen auf:"
+MSG[info_version]="Version"
 MSG[install_hint]="Installieren Sie die Komponente, oder das Paket, dass sie enthält,\n  mit \033[1msudo apt install"
 MSG[keyb_manager]="Tastenkombinations-Manager"
 MSG[notif_disabled]="Das Touchpad ist deaktiviert."
@@ -111,9 +116,13 @@ MSG[rem_not_found]="Keine Tastenkombination gefunden."
 MSG[rem_nothing]="Nichts zu entfernen."
 MSG[rem_preparing]="Bereite Entfernen der Tastenkombination vor..."
 MSG[rem_success]="Tastenkombination erfolgreich entfernt."
+MSG[reset_aborted]="Reset-Vorgang von ${USER^} abgebrochen."
+MSG[reset_confirm_prompt]="Fortsetzen? [j/N]: "
+MSG[reset_confirm_warning]="Diese Operation setzt ALLE Eingabegeräte zurück (Tastatur, Maus, Touchpad, etc.)."
 MSG[reset_fail]="Zurücksetzen des Eingabe-Subsystems gescheitert."
 MSG[reset_preparing]="Setze Eingabe-Subsystem zurück..."
 MSG[reset_success]="Eingabe-Subsystem erfolgreich zurückgesetzt."
-MSG[reset_sudo_hint]="Um das Eingabe-Subsystem neu zu laden, sind erhöhte Privilegien erforderlich."
+MSG[reset_sudo_hint]="Um das Eingabe-Subsystem neu zu laden sind erhöhte Privilegien erforderlich."
+MSG[sudo_required]="Erhöhte Berechtigungen (sudo) sind für diese Operation erforderlich."
 MSG[watch_start]="Beobachte ${SCRIPT_PATH} im Interval von ${WATCH_INTERVAL} Sekunden...\n"
 MSG[watch_stop]="Beobachten beendet.\n\n"

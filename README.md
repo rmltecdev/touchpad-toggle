@@ -12,6 +12,7 @@ Invoke touchpad-toggle with one of these options:
 ├ --reset         Hard reset input sub-system; elevated privileges required
 ├ --toggle        Toggle touchpad enable/disable
 ├ --unassign      Remove permanent keyboard shortcut
+├ --version       Show version metadata
 ╰ --watch         Watch touchpad-toggle; periodically updated, quit with Ctrl+C
  
   Script path     /home/martin/bin/touchpad-toggle
@@ -54,17 +55,18 @@ To function correctly, the host system requires the following:
 ### Operating System  
 
 * Any  [Linux](https://www.linux.org) distribution, based on [Debian](https://www.Debian.org/) or [Ubuntu](https://www.ubuntu.com/) with Bourne-again shell (v4.0 or higher recommended for associative array support) or compatible, such as [ZORIN OS](https://www.zorin.com/).  
-* [GNOME](https://www.gnome.org/) desktop environment, and [Wayland](https://wayland.freedesktop.org/) display driver installed and in use.  
+* [GNOME](https://www.gnome.org/) desktop environment and [Wayland](https://wayland.freedesktop.org/) display driver installed and in use.  
 
 ### Dependencies  
 
-* `gsettings` (GLib command line interface)  
-
-* `notify-send` (libnotify-bin)  
-
-* `paplay` (PulseAudio command line utility) or a compatible audio player.  
-
+* `gsettings` (GLib command line interface, from `gsettings-desktop-schemas`)  
+* `notify-send` (libnotify)  
 * `realpath` (GNU coreutils)  
+* **Audio player**  
+   No configuration required — the script auto-detects what's available on your system at runtime.
+  * PipeWire: `pw-play`  
+  * PulseAudio: `paplay`  
+  * ALSA: `aplay`  
 
 ## Functionality
 
@@ -88,97 +90,15 @@ The script utilizes Bash scripting to interface with GNOME's `gsettings` and `dc
 
 ### Toggle Logic  
 
-This function handles the core purpose of the script. It uses `gsettings` to read the current state and flips it.  
-
-```bash
-toggle_touchpad() {
-    local current_state
-    # 1. Fetch current status (returns 'enabled' or 'disabled')
-    current_state=$(get_current_state)
-    
-    # 2. Define notification hint for stack replacement (prevents notification flooding)
-    local notif_hint="string:x-canonical-private-synchronous:touchpad-toggle"
- 
-    if [ "${current_state}" = "'enabled'" ]; then
-        # 3. Disable Touchpad
-        gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'disabled'"
-        
-        # 4. Play audio in background (&) to avoid blocking execution
-        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" &
-        
-        # 5. Send visual notification
-        notify-send -i input-touchpad-symbolic -h "${notif_hint}" "${MSG[notif_title]}" "${MSG[notif_disabled]}"
-    else
-        # Enable logic (symmetric to above)
-        gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'enabled'"
-        "${AUDIO_PLAYER}" "${TOUCHPAD_ENABLED}" &
-        notify-send -i input-touchpad-symbolic -h "${notif_hint}" "${MSG[notif_title]}" "${MSG[notif_enabled]}"
-    fi
-}
-```
+This function handles the core purpose of the script. It uses `gsettings` to read the current state and flips it to deactivate and activate the touchpad.  
 
 ### Shortcut Assignment  
 
-This is the most complex logic. GNOME stores custom keybindings as a list of paths. The script must safely append a new path without breaking existing ones.  
-
-```bash
-set_shortcut() {
-    # ... (Pre-checks omitted)
- 
-    # 1. Generate a unique path for the new keybinding schema
-    local timestamp=$(date +%s)
-    local new_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-touchpad-toggle-${timestamp}/"
-    
-    # 2. Get the current list of custom bindings (e.g., "['/path/1', '/path/2']")
-    local current_list
-    current_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings)
- 
-    # 3. Append the new path to the list string
-    local new_list=""
-    if [ "${current_list}" = "@as []" ]; then
-        # Handle empty list case
-        new_list="['${new_path}']"
-    else
-        # Strip closing bracket and append new path
-        new_list="${current_list%]}, '${new_path}']"
-    fi
- 
-    # 4. Write the new list back to GNOME
-    gsettings set "${MEDIA_KEYS_SCHEMA}" custom-keybindings "${new_list}"
-    
-    # 5. Populate the properties of the new keybinding object
-    # This links the keybinding to THIS specific script path
-    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" name "${MSG[set_gnome_name]}"
-    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" command "${SCRIPT_PATH} --toggle"
-    gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${new_path}" binding "${KEY_BINDING}"
-}
-```
+This is the most complex logic: GNOME stores custom keybindings as a list of paths. The script must safely append a new path without breaking existing ones.  
 
 ### Localization Architecture  
 
 The external localization files use an associative array `MSG` to map keys to localized strings, ensuring easy translation updates. The logic probes presence of the fallback localization file and aborts if it is missing, prompting the user to ensure that language files are in same directory as the script.  
-
-```bash
-declare -A MSG
-SYSTEM_LANG="${LANG:0:2}"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
- 
-LOCALE_FILE="${SCRIPT_DIR}/${SCRIPT_NAME}.${SYSTEM_LANG}"
-FALLBACK_FILE="${SCRIPT_DIR}/${SCRIPT_NAME}.en"
- 
-if [[ -f "$LOCALE_FILE" ]]; then
-    source "$LOCALE_FILE"
-elif [[ -f "$FALLBACK_FILE" ]]; then
-    source "$FALLBACK_FILE"
-else
-	printf "\n%b%b%b\n" "${FORMATTING_HEADER}" ":: Battery Guardian ::" "${FORMATTING_RESET}"
-	printf "\n%b%b%b%b\n" "$INDICATOR_FAIL" "$FORMATTING_BOLD" "Localization error" "${FORMATTING_RESET}"
-    printf "  Missing fallback file '$FALLBACK_FILE'.\n"
-    printf "  Ensure language files are in same directory as script.\n\n"
-    exit 1
-fi
-```
 
 The default fallback language is generic English `[en]`.  
 
@@ -200,30 +120,59 @@ Ensure required tools are installed (example for Debian/Ubuntu):
 ```bash
 sudo apt update
 sudo apt install libnotify-bin pulseaudio-utils
+``` 
+
+4. **Audio Configuration (Advanced)**  
+
+By default, the script auto-detects available sound files from standard Linux locations:  
+
+* `/usr/share/sounds/freedesktop/stereo/`
+* `/usr/share/sounds/ubuntu/stereo/`
+* `/usr/share/sounds/zorin/stereo/`
+
+  **Custom Sound Files**  
+  To use custom sound files, uncomment and edit these variables near the top of the script:  
+
+```bash
+TOUCHPAD_DISABLED="/path/to/custom-disabled.oga"  
+TOUCHPAD_ENABLED="/path/to/custom-enabled.oga"
 ```
 
-Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.  
-
-4. **Audio Files**  
-The script expects audio files at `/usr/share/sounds/zorin/stereo/`. If you are not using Zorin OS, edit the `TOUCHPAD_DISABLED` and `TOUCHPAD_ENABLED` variables in the script to point to existing `.ogg` or `.wav` files on your system.
+Supported formats: `.oga`, `.ogg`, `.wav` (depending on your audio player).
 
 ## Usage
 
-The script is a CLI tool that accepts specific options.  
+The script is designed to run autonomously. Manual invocation provides status readouts and management options.  
 
 **Command** `./touchpad-toggle [OPTION]`
 
-| *Option*                 | *Description*                                                                              |
-| ------------------------ | ------------------------------------------------------------------------------------------ |
-| (invalid or no option) | Displays the current status of the touchpad and checks if the keyboard shortcut is active. |
-| `--assign`               | Assigns a permanent keyboard shortcut (Default: `<Super>q`).                               |
-| `--help`                 | Opens the manual page.                                                                     |
-| `--reset`                | Hard reset input sub-system (requires elevated privileges)                                 |
-| `--toggle`               | Immediately toggles the touchpad state. This is the command used by the keyboard shortcut. |
-| `--unassign`             | Removes the permanent keyboard shortcut associated with Touchpad Toggle.                   |
+* Invalid or no option  
+  Displays the current status of the touchpad and checks if the keyboard shortcut is active.  
+
+* `./touchpad-toggle --assign`  
+  Assigns a permanent keyboard shortcut (Default: `<Super>q`).  
+
+* `./touchpad-toggle --help`  
+  Opens the manual page.  
+
+* `./touchpad-toggle --reset`  
+  Hard reset input sub-system (requires elevated privileges)  
+
+* `./touchpad-toggle --toggle`  
+  Immediately toggles the touchpad state. This is the command used by the keyboard shortcut.  
+
+* `./touchpad-toggle --unassign`  
+  Removes the permanent keyboard shortcut associated with Touchpad Toggle.  
+
+* `./touchpad-toggle --version`  
+  Shows the version metadata: version number and build date.  
+
+* `./touchpad-toggle --watch`  
+  Loads `touchpad-toggle` with the `watch` command to allow monitoring the touchpad status. Updated every 2 seconds; quit with Ctrl+C.  
+
 **Example Workflow**
 
-1. Invoke `./touchpad-toggle --assign` to install the shortcut.
+1. Invoke `./touchpad-toggle --assign` to assign the keyboard shortcut.
 
 2. Press `Super+Q` (`Windows Key + Q` or `Meta Key + Q`) to toggle the touchpad.
 
@@ -231,7 +180,7 @@ The script is a CLI tool that accepts specific options.
 
 ### Common Errors  
 
-1. **"Required system component is not installed"**  
+1. **Required system component is not installed**  
 The script checks for `gsettings`, `notify-send`, and the audio player. Install the missing package shown in the error message.  
 Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.
 
@@ -271,21 +220,68 @@ This forces the shell to print every command and its expanded arguments to stand
 
     *Note*  
     Enabling this is useful for development but may cause the script to crash if an audio file is missing or a `gsettings` key is temporarily unavailable.  
+    
+## Logging
+
+Relevant script actions are logged to `~/.local/state/touchpad-toggle.log`. This includes:
+
+* Touchpad toggle events (enable/disable)
+* Keyboard shortcut assignments and removals
+* Input subsystem resets
+* Audio player detection failures
+* Dependency check failures
+
+### Log Entry Format
+
+Touchpad-Toggle events are logged in this format:
+
+```bash
+[YYYY-MM-DD HH:MM:SS] [touchpad-toggle, vX.Y.Z] Message
+```
+
+**Example:**
+
+```bash
+[2026-08-01 17:45:33] [touchpad-toggle, v1.0.0-alpha] Keyboard shortcut <Super>q assigned.
+[2026-08-01 17:45:32] [touchpad-toggle, v1.0.0-alpha] Touchpad disabled.
+```
+
+### Useful Commands
+
+* View recent entries:*  
+
+```bash
+tail -f ~/.local/state/touchpad-toggle/touchpad-toggle.log
+```
+
+* Search for errors:
+
+```bash
+grep "failed\|error" ~/.local/state/touchpad-toggle/touchpad-toggle.log
+```
+
+* Rotate/clear logs (optional):
+
+```bash
+> ~/.local/state/touchpad-toggle/touchpad-toggle.log
+```
+
+### Privacy Note
+
+Logs contain only script actions and state changes. No personal data, file contents, or keystroke patterns are recorded.
 
 ## Help  
 
 The script includes a built-in "Man Page" style help viewer.
 
-* Invoked via: `./touchpad-toggle --help`
-* It pipes localized documentation into the `less` pager, allowing for scrolling and searching within the help text.
+* Invoked via: `./touchpad-toggle --help`  
+* It pipes localized documentation into the `less` pager, allowing for scrolling and searching within the help text.  
 * If the script is invoked with an invalid option, it defaults to `display_info`, showing a concise usage summary.  
 
 **Currently Implemented Localizations**  
 
 * English, generic (default fallback)  
-
 * German, generic  
-
 * Thai  
 
 ## Appendix  

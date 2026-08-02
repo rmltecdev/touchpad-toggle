@@ -36,24 +36,26 @@ ENVIRONMENT
     Linux with GNOME Desktop Environment and Wayland Display Server.
 
 REQUIREMENTS
-    Audio player             ${AUDIO_PLAYER}
-    Touchpad enabled sound   ${TOUCHPAD_ENABLED}
-    Touchpad disabled sound  ${TOUCHPAD_DISABLED}
+    Audio player (ALSA, PipeWire, PulseAudio) auto-detected at runtime.
+    Touchpad enable and disable system sounds.
 
 CONFIGURATION
     Default key binding      ${KEY_BINDING}
 
 USAGE
-    $(basename "$0") [OPTION]
+    ${SCRIPT_NAME} [OPTION]
 
     OPTIONS
         (none/invalid)  Show current status of touchpad and keyboard shortcut
         --assign        Assign permanent keyboard shortcut
         --help          Show this help
-        --reset         Hard reset input drivers; elevated privileges required
+        --reset         Hard reset input drivers; elevated privileges
+                        required
         --toggle        Toggle touchpad enable/disable
         --unassign      Remove permanent keyboard shortcut
-        --watch         Watch $(basename "$0"); periodically updated, quit with Ctrl+C
+        --version       Show version metadata
+        --watch         Watch ${SCRIPT_NAME}; updated every ${WATCH_INTERVAL} seconds;
+                        quit with Ctrl+C
 
 AUTHOR
     Copyright (c) 2026 RML Tec Dev
@@ -80,7 +82,7 @@ MSG[assign_instructions]="If the keyboard shortcut does not disable and re-enabl
 MSG[assign_preparing]="Assigning keyboard shortcut..."
 MSG[assign_success]="Keyboard shortcut successfully assigned to"
 MSG[check_assign]="Assigned"
-MSG[check_invoke_hint]="Invoke $(basename "$0") with option --assign to assign a permanent keyboard shortcut."
+MSG[check_invoke_hint]="Invoke ${SCRIPT_NAME} with option --assign to assign a permanent keyboard shortcut."
 MSG[check_not_detected]="Not detected"
 MSG[check_status_label]="Shortcut status"
 MSG[error_tool]="Required system component is not installed:"
@@ -88,17 +90,20 @@ MSG[header]="≡ Touchpad Toggle ≡"
 MSG[help_close]="Help closed."
 MSG[help_open]="Opening help..."
 MSG[help_text]="$MSG_HELP_TEXT"
+MSG[info_build_date]="Build date"
 MSG[info_desc_assign]="Assign permanent keyboard shortcut; default:"
 MSG[info_desc_help]="Show description, usage and license"
 MSG[info_desc_remove]="Remove permanent keyboard shortcut"
 MSG[info_desc_reset]="Hard reset input sub-system; elevated privileges required"
 MSG[info_desc_toggle]="Toggle touchpad enable/disable"
+MSG[info_desc_version]="Show version information"
 MSG[info_disabled]="Disabled"
 MSG[info_enabled]="Enabled"
-MSG[info_opt_watch]="Watch $(basename "$0"); periodically updated, quit with Ctrl+C"
+MSG[info_opt_watch]="Watch ${SCRIPT_NAME}; updated every ${WATCH_INTERVAL} seconds; quit with Ctrl+C"
 MSG[info_path]="Script path"
 MSG[info_status_label]="Touchpad status"
-MSG[info_invoke]="Invoke $(basename "$0") with one of these options:"
+MSG[info_invoke]="Invoke ${SCRIPT_NAME} with one of these options:"
+MSG[info_version]="Version"
 MSG[install_hint]="Install it, or the package providing it,\n  with \033[1msudo apt-get install"
 MSG[keyb_manager]="Keyboard Shortcut Manager"
 MSG[notif_disabled]="Touchpad is now disabled."
@@ -109,9 +114,13 @@ MSG[rem_not_found]="No shortcut found."
 MSG[rem_nothing]="Nothing to remove."
 MSG[rem_preparing]="Removing keyboard shortcut..."
 MSG[rem_success]="Shortcut successfully removed."
+MSG[reset_aborted]="Reset operation aborted by ${USER^}."
+MSG[reset_confirm_prompt]="Continue? [y/N]: "
+MSG[reset_confirm_warning]="This operation will reset ALL input devices (keyboard, mouse, touchpad, etc.)"
 MSG[reset_fail]="Resetting input subsystem failed."
 MSG[reset_preparing]="Resetting input subsystem (Hard Reset)..."
 MSG[reset_success]="Input subsystem successfully reset."
 MSG[reset_sudo_hint]="Requires elevated privileges (sudo) to reload hardware drivers.\n"
+MSG[sudo_required]="Elevated privileges (sudo) are required for this operation."
 MSG[watch_start]="Watching ${SCRIPT_PATH} with interval of ${WATCH_INTERVAL} seconds...\n"
 MSG[watch_stop]="Watching ended.\n\n"

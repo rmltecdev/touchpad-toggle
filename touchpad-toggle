@@ -27,7 +27,7 @@
 
 
 
-# ───── Error handling ─────────────────────────────────────────────
+# ───── Error handling ─────────────────────────────────────────────────
 
 # Intentionally disabled for GRACEFUL error handling.
 # Uncomment to enable STRICT error handling.
@@ -35,25 +35,34 @@
 
 
 
-# ───── Variables declaration ──────────────────────────────────────
+# ───── Variables declaration ──────────────────────────────────────────
 
 # Global Environment
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Configuration
 KEY_BINDING="<Super>q"
+WATCH_INTERVAL="2"
 
-# Environment
+# User specific sounds
 TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
 TOUCHPAD_ENABLED="/usr/share/sounds/zorin/stereo/device-added.oga"
-AUDIO_PLAYER="/usr/bin/pw-play"
+
+# Version metadata
+VERSION="1.0.0-alpha"
+BUILD_DATE="2026-08-01"
+
+# Environment
 GSETTINGS_SCHEMA="org.gnome.desktop.peripherals.touchpad"
 GSETTINGS_KEY="send-events"
 MEDIA_KEYS_SCHEMA="org.gnome.settings-daemon.plugins.media-keys"
 DCONF_PATH="/org/gnome/desktop/peripherals/touchpad/send-events"
-WATCH_INTERVAL="5"
 SCRIPT_PATH=$(realpath -s "$0")    # realpath -s: Returns absolute path but DOES NOT resolve symlinks.
-LOG_DIR="$HOME/.var/log"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
+
+# Logging
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
 RUNTIME_LOG="$LOG_DIR/touchpad-toggle.log"
 
 
@@ -71,13 +80,20 @@ FORMATTING_HEADER="\033[1;34m"
 
 
 
-# ───── Localization ───────────────────────────────────────────────
+# ───── Logging ────────────────────────────────────────────────────
+
+log() {
+    [[ -d "$LOG_DIR" ]] || mkdir -p "$LOG_DIR"
+    printf "[%s] [%s, v%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$SCRIPT_NAME" "$VERSION" "$1" >> "$RUNTIME_LOG"
+}
+
+
+
+# ───── Localization ───────────────────────────────────────────────────
 
 # Detect system language (default to 'en' if detection fails)
 declare -A MSG
 SYSTEM_LANG="${LANG:0:2}"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 
 # Declare Languages Dictionary
 LOCALE_FILE="${SCRIPT_DIR}/${SCRIPT_NAME}.${SYSTEM_LANG}"
@@ -88,16 +104,17 @@ if [[ -f "$LOCALE_FILE" ]]; then
 elif [[ -f "$FALLBACK_FILE" ]]; then
     source "$FALLBACK_FILE"
 else
-    printf "\n%b%b%b\n" "${FORMATTING_HEADER}" ":: Battery Guardian ::" "${FORMATTING_RESET}"
-    printf "\n%b%b%b%b\n" "$INDICATOR_FAIL" "$FORMATTING_BOLD" "Localization error" "${FORMATTING_RESET}"
+    printf "\n%b%b%b\n" "${FORMATTING_HEADER}" "≡ Touchpad Toggle ≡" "${FORMATTING_RESET}"
+    printf "\n%b%b%b\n" "$INDICATOR_FAIL" "Localization error" "${FORMATTING_RESET}"
     printf "  Missing fallback file '$FALLBACK_FILE'.\n"
     printf "  Ensure language files are in same directory as script.\n\n"
+    log "■ Localization failed."
     exit 1
 fi
 
 
 
-# ───── Show Header ────────────────────────────────────────────────
+# ───── Show Header ────────────────────────────────────────────────────
 
 show_header() {
     printf "\n%b%b%b\n\n" "${FORMATTING_HEADER}" "${MSG[header]}" "${FORMATTING_RESET}"
@@ -105,31 +122,101 @@ show_header() {
 
 
 
-# ───── Man Page style help viewer ────────────────────────────────────────
+# ───── Man Page Style Help Viewer ─────────────────────────────────────
 
 show_help() {
-    echo "${MSG[help_open]}" #| tee -a "$RUNTIME_LOG"
+    echo "${MSG[help_open]}" 
+    log "● Opening help..."
     echo "${MSG[help_text]}" | less
-    echo "${MSG[help_close]}" #| tee -a "$RUNTIME_LOG"
+    echo "${MSG[help_close]}"
+    log "● Help closed."
     exit 0
 }
 
 
 
-# ───── Dependency Check ───────────────────────────────────────────
+# ───── Detect Audio System ────────────────────────────────────────────
+
+detect_audio_system() {
+    # 1. Detect audio player
+    if [[ -z "${AUDIO_PLAYER:-}" || ! -x "${AUDIO_PLAYER}" ]]; then
+        if command -v pw-play &>/dev/null; then
+            AUDIO_PLAYER="$(command -v pw-play)"
+        elif command -v paplay &>/dev/null; then
+            AUDIO_PLAYER="$(command -v paplay)"
+        elif command -v aplay &>/dev/null; then
+            AUDIO_PLAYER="$(command -v aplay)"
+        else
+            printf "%b%b%s%b\n" "${INDICATOR_FAIL}" "${FORMATTING_RESET}" \
+                "${MSG[error_no_audio]}" "${FORMATTING_RESET}" >&2
+            printf "  %b\n" "${MSG[install_hint]}"
+            log "◆ No audio system detected."
+            return 1
+        fi
+    fi
+
+    # 2. Detect sound files — only if current paths don't exist
+    if [[ -f "${TOUCHPAD_DISABLED:-}" && -f "${TOUCHPAD_ENABLED:-}" ]]; then
+        return 0  # Already configured and valid, skip detection
+    fi
+
+    local -a sound_paths=(
+        "/usr/share/sounds/freedesktop/stereo"
+        "/usr/share/sounds/ubuntu/stereo"
+        "/usr/share/sounds/zorin/stereo"
+        "$HOME/.local/share/sounds/freedesktop/stereo"
+    )
+
+    local found=false
+    for dir in "${sound_paths[@]}"; do
+        if [[ -f "$dir/device-removed.oga" && -f "$dir/device-added.oga" ]]; then
+            TOUCHPAD_DISABLED="$dir/device-removed.oga"
+            TOUCHPAD_ENABLED="$dir/device-added.oga"
+            found=true
+            break
+        elif [[ -f "$dir/complete.oga" ]]; then
+            TOUCHPAD_DISABLED="$dir/complete.oga"
+            TOUCHPAD_ENABLED="$dir/complete.oga"
+            found=true
+            break
+        fi
+    done
+
+    if [[ "$found" = false ]]; then
+        printf "%b%b%s%b\n" "${INDICATOR_WARN}" "${FORMATTING_RESET}" \
+            "${MSG[warn_no_sound]}" "${FORMATTING_RESET}"
+        printf "  %b\n" "${MSG[warn_no_sound_hint]}"
+        AUDIO_PLAYER=""
+    fi
+
+    return 0
+}
+
+
+
+# ───── Dependency Check ───────────────────────────────────────────────
 
 check_dependencies() {
 
     # Title for GNOME notifications
-    notify_app_title="Touchpad Toggle"
-    # Check for critical tools before proceeding.
-    # We strip arguments from AUDIO_PLAYER to check just the binary name.
-    for tool in gsettings notify-send "${AUDIO_PLAYER%% *}"; do
+    notify_app_title="≡ Touchpad Toggle ≡"
+
+    # Build dynamic tools array
+    local -a tools=("gsettings" "notify-send")
+
+    # Only check audio player if it was detected/set
+    if [[ -n "${AUDIO_PLAYER:-}" ]]; then
+        tools+=("${AUDIO_PLAYER%% *}")
+    fi
+
+    for tool in "${tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
-            # Strip the path to show only the binary name for the error message
             tool_name="${tool##*/}"
-            printf "%b%b%b %b%s%b\n" "${notify_app_name}" "${INDICATOR_FAIL}" "${FORMATTING_RESET}" "${MSG[error_tool]}" "${FORMATTING_BOLD}" "$tool_name" "${FORMATTING_RESET}" >&2
-            printf "  %b %b%b%b\n\n" "${notify_app_name}" "${MSG[install_hint]}" "${FORMATTING_BOLD}" "$tool_name" "${FORMATTING_RESET}"
+            printf "%b%b%b %b%s%b\n" "${notify_app_title}" "${INDICATOR_FAIL}" "${FORMATTING_RESET}" \
+                "${MSG[error_tool]}" "${FORMATTING_BOLD}" "$tool_name" "${FORMATTING_RESET}" >&2
+            printf "  %b %b%b%b\n\n" "${notify_app_title}" "${MSG[install_hint]}" \
+                "${FORMATTING_BOLD}" "$tool_name" "${FORMATTING_RESET}"
+            log "■ Dependencies missing."
             exit 1
         fi
     done
@@ -137,7 +224,7 @@ check_dependencies() {
 
 
 
-# ───── Get Current Touchpad State ─────────────────────────────────
+# ───── Get Current Touchpad State ─────────────────────────────────────
 
 get_current_state() {
     gsettings get "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}"
@@ -145,13 +232,14 @@ get_current_state() {
 
 
 
-# ───── Toggle Touchpad ────────────────────────────────────────────
+# ───── Toggle Touchpad ────────────────────────────────────────────────
 
 toggle_touchpad() {
     # A 200ms execution buffer prevents the libinput race condition 
     # (n=n+1 gesture bug). It allows physical keystrokes (Super+Q) and
     # palm resting events to clear the event queue, ensuring libinput is
-    # in a neutral state before the DBus state change severs the event stream.
+    # in a neutral state before the DBus state change severs the event 
+    # stream.
     sleep 0.2
 
     local current_state
@@ -165,10 +253,12 @@ toggle_touchpad() {
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'disabled'"
         "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" &
         notify-send -a "${notify_app_title}" -i touchpad-disabled-symbolic -h "${notif_hint}" "⚠️ ${MSG[notif_title]}" "${MSG[notif_disabled]}"
+        log "▲ Touchpad disabled."
     else
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'enabled'"
         "${AUDIO_PLAYER}" "${TOUCHPAD_ENABLED}" &
         notify-send -a "${notify_app_title}" -i input-touchpad-symbolic -h "${notif_hint}" "✅ ${MSG[notif_title]}" "${MSG[notif_enabled]}"
+        log "● Touchpad enabled."
     fi
 
     check_state
@@ -178,7 +268,7 @@ toggle_touchpad() {
 
 
 
-# ───── Check Touchpad Status ──────────────────────────────────────
+# ───── Check Touchpad Status ──────────────────────────────────────────
 
 check_state() {
     local state
@@ -192,7 +282,7 @@ check_state() {
 
 
 
-# ───── Keyboard Shortcut Management ───────────────────────────────
+# ───── Keyboard Shortcut Management ───────────────────────────────────
 
 # Check Keyboard Shortcut
 
@@ -297,6 +387,7 @@ remove_shortcut() {
     
     # Localized Output
     printf "%b%b%b\n\n" "${INDICATOR_PASS}" "${FORMATTING_RESET}" "${MSG[rem_success]}"
+    log "◆ Keyboard shortcut removed."
 }
 
 
@@ -341,34 +432,53 @@ assign_shortcut() {
     # Localized Output
     printf "%b%b%s %b%b%b\n" "${INDICATOR_PASS}" "${FORMATTING_RESET}" "${MSG[assign_success]}" "${FORMATTING_BOLD}" "${KEY_BINDING}" "${FORMATTING_RESET}"
     printf "%b%s\n\n" "${MSG[assign_instructions]}"
+    log "● Keyboard shortcut ${KEY_BINDING} assigned."
 }
 
 
 
-# ───── Reset Input Subsystem ──────────────────────────────────────
+# ───── Reset Input Subsystem ──────────────────────────────────────────
 
 reset_input_subsystem() {
+    # 1. Confirm user intent
+    printf "%b%b%s%b\n\n" "${INDICATOR_WARN}" "${FORMATTING_RESET}" \
+        "${MSG[reset_confirm_warning]}" "${FORMATTING_RESET}"
+    printf "  %s" "${MSG[reset_confirm_prompt]}"
+    
+    read -r response
+    case "$response" in
+        [YyJj]*)
+            # Continue
+            ;;
+        *)
+            printf "\n%b%b%s%b\n\n" "${INDICATOR_INFO}" "${FORMATTING_RESET}" \
+                "${MSG[reset_aborted]}" "${FORMATTING_RESET}"
+            return 1
+            ;;
+    esac
 
-    # Localized Output: Preparing
-    printf "%b%b%s\n" "${INDICATOR_INFO}" "${FORMATTING_RESET}" "${MSG[reset_preparing]}"
+    # 2. Validate sudo availability
+    if ! sudo -n true 2>/dev/null; then
+        printf "\n%b%b%s%b\n" "${INDICATOR_WARN}" "${FORMATTING_RESET}" \
+            "${MSG[sudo_required]}" "${FORMATTING_RESET}"
+        exit 1
+    fi
 
-    # Localized Output: Sudo Hint
-    printf "  %b\n" "${MSG[reset_sudo_hint]}"
-
-    # Reset Execution
-    # We use sudo explicitly here. If run from a shortcut without a terminal, 
-    # this will fail safely unless passwordless sudo is configured.
+    # 3. Execute reset
+    printf "%b%s%b\n" "${INDICATOR_INFO}" "${MSG[reset_preparing]}" "${FORMATTING_RESET}"
     if sudo udevadm trigger -s input; then
         printf "\n%b%b%s\n\n" "${INDICATOR_PASS}" "${FORMATTING_RESET}" "${MSG[reset_success]}"
+        log "Input reset successful."
     else
         printf "\n%b%b%s\n\n" "${INDICATOR_FAIL}" "${FORMATTING_RESET}" "${MSG[reset_fail]}"
+        log "■ Input subsystem reset failed."
         exit 1
     fi
 }
 
 
 
-# ───── Display Status and Config Information ──────────────────────
+# ───── Display Status and Config Information ──────────────────────────
 
 display_info() {
 
@@ -381,37 +491,53 @@ display_info() {
     printf "├ $INFO_PAD %s%b\n" "--reset" "${MSG[info_desc_reset]}"  
     printf "├ $INFO_PAD %s%b\n" "--toggle" "${MSG[info_desc_toggle]}"
     printf "├ $INFO_PAD %s%b\n" "--unassign" "${MSG[info_desc_remove]}"
+    printf "├ $INFO_PAD %s%b\n" "--version" "${MSG[info_desc_version]}"
     printf "╰ $INFO_PAD %s%b\n\n" "--watch" "${MSG[info_opt_watch]}"
     printf "  $INFO_PAD %b%b\n\n" "${MSG[info_path]}" "${SCRIPT_PATH}"    
 }
 
 
 
-# ───── Watch Script ─────────────────────────────────────────────
+# ───── Watch Script ───────────────────────────────────────────────────
 
 watch_script() {
     printf "${MSG[watch_start]}"
+    log "● Watching script…"
     watch --no-wrap --color --interval "$WATCH_INTERVAL" "$SCRIPT_PATH"
     printf "${MSG[watch_stop]}"
+    log "● Script watching ended."
+}
+
+
+# ───── Show Version ───────────────────────────────────────────────────
+
+show_version() {
+    printf "  %-14s %s\n" "${MSG[info_version]}:" "$VERSION"
+    printf "  %-14s %s\n" "${MSG[info_build_date]}:" "$BUILD_DATE"
+    printf "  %-14s %s\n" "${MSG[info_path]}:" "$SCRIPT_PATH"
+    exit 0
 }
 
 
 
-# ───── Main Logic Execution ───────────────────────────────────────
+# ───── Main Logic Execution ───────────────────────────────────────────
 
-check_dependencies
 show_header
+detect_audio_system || exit 1
+check_dependencies
+
 
 # Check which option is provided
 
 case "$1" in
-    --assign)    assign_shortcut     ;;
-    --help)        show_help ;;
+    --assign)   assign_shortcut       ;;
+    --help)     show_help             ;;
     --reset)    reset_input_subsystem ;;
-    --toggle)    toggle_touchpad     ;;
-    --unassign)    remove_shortcut     ;;
-    --watch)    watch_script ;;
-    *)            display_info
+    --toggle)   toggle_touchpad       ;;
+    --unassign) remove_shortcut       ;;
+    --version)  show_version          ;;
+    --watch)    watch_script          ;;
+    *)          display_info
 esac
 
 exit 0

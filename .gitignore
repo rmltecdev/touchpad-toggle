@@ -1,0 +1,17 @@
+# Logs
+*.log
+
+# Runtime
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
