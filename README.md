@@ -13,7 +13,7 @@ Invoke touchpad-toggle with one of these options:
 ├ --toggle        Toggle touchpad enable/disable
 ├ --unassign      Remove permanent keyboard shortcut
 ├ --version       Show version metadata
-╰ --watch         Watch touchpad-toggle; periodically updated, quit with Ctrl+C
+╰ --watch         Watch touchpad-toggle; updated every 2 seconds, quit with Ctrl+C
  
   Script path     /home/martin/bin/touchpad-toggle
 ```
@@ -223,7 +223,7 @@ This forces the shell to print every command and its expanded arguments to stand
     
 ## Logging
 
-Relevant script actions are logged to `~/.local/state/touchpad-toggle.log`. This includes:
+Following XDG Base Directory Specification, relevant script actions are logged to `~/.local/state/touchpad-toggle.log`. This includes:
 
 * Touchpad toggle events (enable/disable)
 * Keyboard shortcut assignments and removals
@@ -251,13 +251,13 @@ Touchpad-Toggle events are logged in this format:
 * View recent entries:*  
 
 ```bash
-tail -f ~/.local/state/touchpad-toggle/touchpad-toggle.log
+tail -f ~/.local/state/touchpad-toggle.log
 ```
 
 * Search for errors:
 
 ```bash
-grep "failed\|error" ~/.local/state/touchpad-toggle/touchpad-toggle.log
+grep "failed\|error" ~/.local/state/touchpad-toggle.log
 ```
 
 * Rotate/clear logs (optional):
