@@ -49,8 +49,8 @@ TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
 TOUCHPAD_ENABLED="/usr/share/sounds/zorin/stereo/device-added.oga"
 
 # Version metadata
-VERSION="1.0.1"
-BUILD_DATE="2026-08-02"
+VERSION="1.1.0"
+BUILD_DATE="2026-08-04"
 
 # Environment
 GSETTINGS_SCHEMA="org.gnome.desktop.peripherals.touchpad"
@@ -80,7 +80,7 @@ FORMATTING_HEADER="\033[1;34m"
 
 
 
-# ───── Logging ────────────────────────────────────────────────────
+# ───── Logging ────────────────────────────────────────────────────────
 
 log() {
     [[ -d "$LOG_DIR" ]] || mkdir -p "$LOG_DIR"
@@ -198,12 +198,6 @@ detect_audio_system() {
 
 check_dependencies() {
 
-    # Title for GNOME notifications
-    notify_app_title="≡ Touchpad Toggle ≡"
-
-    # Build dynamic tools array
-    local -a tools=("gsettings" "notify-send")
-
     # Only check audio player if it was detected/set
     if [[ -n "${AUDIO_PLAYER:-}" ]]; then
         tools+=("${AUDIO_PLAYER%% *}")
@@ -244,20 +238,14 @@ toggle_touchpad() {
 
     local current_state
     current_state=$(get_current_state)
-    local notif_hint="string:x-canonical-private-synchronous:touchpad-toggle"
     
-    # Title for GNOME notifications
-    notify_app_title="Touchpad Toggle"
-
     if [ "${current_state}" = "'enabled'" ]; then
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'disabled'"
-        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" &
-        notify-send -a "${notify_app_title}" -i touchpad-disabled-symbolic -h "${notif_hint}" "⚠️ ${MSG[notif_title]}" "${MSG[notif_disabled]}"
+        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" 
         log "▲ Touchpad disabled."
     else
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'enabled'"
-        "${AUDIO_PLAYER}" "${TOUCHPAD_ENABLED}" &
-        notify-send -a "${notify_app_title}" -i input-touchpad-symbolic -h "${notif_hint}" "✅ ${MSG[notif_title]}" "${MSG[notif_enabled]}"
+        "${AUDIO_PLAYER}" "${TOUCHPAD_ENABLED}" 
         log "● Touchpad enabled."
     fi
 
@@ -507,6 +495,7 @@ watch_script() {
     printf "${MSG[watch_stop]}"
     log "● Script watching ended."
 }
+
 
 
 # ───── Show Version ───────────────────────────────────────────────────

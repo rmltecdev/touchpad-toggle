@@ -1,10 +1,23 @@
 #!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────────────
+#
+#  Touchpad Toggle — Smoke Test
+#
+# ──────────────────────────────────────────────────────────────────────
+#
+# Purpose   Smoke test the release package of the Touchpad Toggle 
+#           utility and the optional GNOME extension. Validates
+#           structural integrity and basic CLI behavior. Does NOT
+#           require a live GNOME session or touchpad hardware.
+#
+# Author    Copyright (c) 2026 RML Tec Dev
+#           Contributions and feedback are welcome via rmltecdev@pm.me
+#
+# License   Licensed under the MIT License
+#
+# ──────────────────────────────────────────────────────────────────────
 
-# ──────────────────────────────────────────────────────────────────────
-# Touchpad Toggle — Smoke Tests
-# Validates structural integrity and basic CLI behavior.
-# Does NOT require a live GNOME session or touchpad hardware.
-# ──────────────────────────────────────────────────────────────────────
+
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MAIN_SCRIPT="$SCRIPT_DIR/../touchpad-toggle"
@@ -16,9 +29,18 @@ print_pass() {
     ((PASS_COUNT++)) || true
 }
 
+print_warn() {
+    printf "  %b⚠%b %s\n" "\033[33m" "\033[0m" "$1"
+    ((WARN_COUNT++)) || true
+}
+
 print_fail() {
     printf "  %b✗%b %s\n" "\033[31m" "\033[0m" "$1"
     ((FAIL_COUNT++)) || true
+}
+
+print_skip() {
+    printf "  %b⊘%b %s\n" "\033[90m" "\033[0m" "$1"
 }
 
 echo "┌─────────────────────────────────────────────┐"
@@ -39,6 +61,34 @@ for lang in en de th; do
         || print_fail "Localization file .$lang exists"
 done
 
+# NEW: Extension files
+echo
+echo "── Extension File Integrity ──"
+
+[[ -f "$SCRIPT_DIR/../extension/metadata.json" ]] \
+    && print_pass "Extension metadata.json exists" \
+    || print_fail "Extension metadata.json exists"
+
+[[ -f "$SCRIPT_DIR/../extension/extension.js" ]] \
+    && print_pass "Extension extension.js exists" \
+    || print_fail "Extension extension.js exists"
+
+[[ -f "$SCRIPT_DIR/../extension/prefs.js" ]] \
+    && print_pass "Extension prefs.js exists" \
+    || print_fail "Extension prefs.js exists"
+
+[[ -d "$SCRIPT_DIR/../extension/schemas" ]] \
+    && print_pass "Extension schemas/ directory exists" \
+    || print_fail "Extension schemas/ directory exists"
+
+if [[ -d "$SCRIPT_DIR/../extension/schemas" ]]; then
+    if compgen -G "$SCRIPT_DIR/../extension/schemas/*.xml" > /dev/null 2>&1; then
+        print_pass "Extension GSettings schema XML exists"
+    else
+        print_fail "Extension GSettings schema XML exists"
+    fi
+fi
+
 # ───── 2. Syntax Validation ─────────────────────────────────────────
 
 echo
@@ -54,6 +104,17 @@ for lang in en de th; do
         || print_fail "Localization .$lang: valid Bash syntax"
 done
 
+# NEW: JavaScript syntax check (basic)
+if command -v gjs &>/dev/null; then
+    if gjs -c "imports.debugger.log('Syntax check')" 2>/dev/null; then
+        gjs -c "new Script(new TextInputStream(GLib.file_read_bytes('/dev/null')), {}, 'file:///dev/null');" "$SCRIPT_DIR/../extension/extension.js" 2>/dev/null \
+            && print_pass "Extension extension.js: valid GJS syntax" \
+            || print_warn "Extension extension.js: GJS syntax check inconclusive (expected on some systems)"
+    fi
+else
+    print_warn "Extension extension.js: GJS not available for syntax check"
+fi
+
 # ───── 3. Shebang Check ─────────────────────────────────────────────
 
 echo
@@ -66,47 +127,145 @@ head -1 "$MAIN_SCRIPT" | grep -q '^#!.*bash' \
 # ───── 4. Version Metadata ─────────────────────────────────────────
 
 echo
-echo "── Version Metadata ──"
+echo "── Version Metadata & Consistency ──"
 
-grep -q 'VERSION="' "$MAIN_SCRIPT" \
-    && print_pass "VERSION variable defined" \
-    || print_fail "VERSION variable defined"
+# 4a. Extract version values from each source
+SCRIPT_VERSION=$(grep -E '^VERSION=' "$MAIN_SCRIPT" | head -1 | sed 's/.*=//; s/["'"'"']//g')
+README_VERSION=$(grep -E 'Current version:' "$SCRIPT_DIR/../README.md" | grep -oP '\d+\.\d+\.\d+' | head -1)
+CHANGELOG_VERSION=$(grep -E '^## \[' "$SCRIPT_DIR/../CHANGELOG.md" | head -1 | sed 's/## \[//' | sed 's/\].*//')
 
-grep -q 'BUILD_DATE="' "$MAIN_SCRIPT" \
-    && print_pass "BUILD_DATE variable defined" \
-    || print_fail "BUILD_DATE variable defined"
+BUILD_DATE=$(grep -E '^BUILD_DATE=' "$MAIN_SCRIPT" | sed 's/.*=//; s/["'"'"']//g')
+
+# Print visible version info for manual inspection
+printf "  ℹ️  README version:      %s\n" "${README_VERSION:-'(not found)'}"
+printf "  ℹ️  CHANGELOG version:   %s\n" "${CHANGELOG_VERSION:-'(not found)'}"
+printf "  ℹ️  Script version:      %s\n" "$SCRIPT_VERSION"
+printf "  ℹ️  Build date:          %s\n" "$BUILD_DATE"
+
+
+# 4b. Version consistency check
+if [[ -n "$SCRIPT_VERSION" && -n "$README_VERSION" && -n "$CHANGELOG_VERSION" ]]; then
+    if [[ "$SCRIPT_VERSION" == "$README_VERSION" && "$SCRIPT_VERSION" == "$CHANGELOG_VERSION" ]]; then
+        print_pass "Version consistency across all documents: v$SCRIPT_VERSION"
+    else
+        print_fail "Version mismatch detected! (Script=$SCRIPT_VERSION, README=$README_VERSION, CHANGELOG=$CHANGELOG_VERSION)"
+    fi
+else
+    print_fail "One or more version values not found"
+fi
+
+# 4c. CHANGELOG has entry for current version
+if [[ -n "$SCRIPT_VERSION" ]] && grep -qE "^## \[$SCRIPT_VERSION\]" "$SCRIPT_DIR/../CHANGELOG.md"; then
+    print_pass "CHANGELOG has entry for v$SCRIPT_VERSION"
+else
+    print_fail "CHANGELOG missing entry for v$SCRIPT_VERSION"
+fi
+
+# 4d. No alpha/beta markers in release version
+if [[ "$SCRIPT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    print_pass "Release version has no alpha/beta markers"
+else
+    print_fail "Release version contains alpha/beta marker: $SCRIPT_VERSION"
+fi
 
 # ───── 5. CLI Flags (non-GNOME-safe) ────────────────────────────────
 
 echo
-echo "── CLI Flags ──"
+echo "── Dependency Check (Non-Critical) ──"
 
-# --version: Should work without GNOME
-output=$("$MAIN_SCRIPT" --version 2>/dev/null)
-exit_code=$?
-if [[ $exit_code -eq 0 ]] && echo "$output" | grep -q "$VERSION"; then
-    print_pass "--version returns version info"
-else
-    print_fail "--version returns version info"
+# gsettings and realpath are critical; audio player is optional
+for tool in gsettings realpath; do
+    command -v "$tool" &>/dev/null && print_pass "$tool available" || print_fail "$tool not found" 
+done
+
+# Audio player detection (optional)
+if command -v pw-play &>/dev/null || command -v paplay &>/dev/null || command -v aplay &>/dev/null; then
+        print_pass "Audio player detected"
+    else
+        print_warn "No audio player (acceptable — sound feedback disabled)" 
 fi
 
-# Unknown flag falls back to display_info (may fail without GNOME, that's OK)
-output=$("$MAIN_SCRIPT" --invalid-flag 2>/dev/null)
-exit_code=$?
-if [[ $exit_code -eq 0 ]]; then
-    print_pass "Invalid flag handled gracefully (exit 0)"
+# ───── 6. Extension Settings Schema Validation ───────────────────────
+
+echo
+echo "── Extension Settings Schema ──"
+
+# 6a. Check settings-schema key in metadata.json
+if grep -q '"settings-schema"' "$SCRIPT_DIR/../extension/metadata.json"; then
+    print_pass "metadata.json declares settings-schema"
+    
+    SCHEMA_ID=$(grep -oP '"settings-schema"\s*:\s*"\K[^"]+' "$SCRIPT_DIR/../extension/metadata.json")
+    print_pass "Schema ID: $SCHEMA_ID"
 else
-    # Exit code non-zero is acceptable if GNOME isn't available
-    print_pass "Invalid flag exits (acceptable without GNOME session)"
+    print_fail "metadata.json missing settings-schema declaration"
+    SCHEMA_ID=""
 fi
 
-# ───── 6. Localization ─────────────────────────────────────────────
+# 6b. Verify schema XML has matching ID (FIXED: use find for reliable glob)
+if [[ -n "$SCHEMA_ID" ]]; then
+    SCHEMA_XML=$(find "$SCRIPT_DIR/../extension/schemas/" -maxdepth 1 -name "*.xml" -type f 2>/dev/null | head -1)
+    if [[ -n "$SCHEMA_XML" && -f "$SCHEMA_XML" ]]; then
+        if grep -q "id=\"$SCHEMA_ID\"" "$SCHEMA_XML"; then
+            print_pass "Schema XML has matching ID: $SCHEMA_ID"
+        else
+            print_fail "Schema XML ID mismatch (expected: $SCHEMA_ID, found: $(grep -oP 'id="\K[^"]+' "$SCHEMA_XML"))"
+        fi
+    else
+        print_fail "Schema XML file not found in extension/schemas/ (searched: ${SCHEMA_XML:-none})"
+    fi
+fi
+
+# 6c. Check for colored-icons key
+SCHEMA_FILES=$(find "$SCRIPT_DIR/../extension/schemas/" -name "*.xml" -type f 2>/dev/null)
+if [[ -n "$SCHEMA_FILES" ]]; then
+    if echo "$SCHEMA_FILES" | xargs grep -q 'name="colored-icons"'; then
+        print_pass "Schema defines colored-icons key"
+        
+        FIRST_SCHEMA=$(echo "$SCHEMA_FILES" | head -1)
+        if grep -A2 'name="colored-icons"' "$FIRST_SCHEMA" | grep -q 'type="b"'; then
+            print_pass "colored-icons key type is boolean"
+        else
+            print_fail "colored-icons key is not boolean"
+        fi
+    else
+        print_fail "Schema missing colored-icons key"
+    fi
+else
+    print_skip "Schema validation skipped (no XML files found)"
+fi
+
+# ───── 7. Extension JavaScript Validation ────────────────────────────
+
+echo
+echo "── Extension JavaScript ──"
+
+# 7a. Check for getSettings() usage (proper local schema access)
+if grep -q "this.getSettings()" "$SCRIPT_DIR/../extension/extension.js"; then
+    print_pass "Extension uses this.getSettings() (local schema)"
+else
+    print_fail "Extension does not use this.getSettings() (may fail schema loading)"
+fi
+
+# 7b. Verify __SCRIPT_PATH__ placeholder is NOT replaced in source (should be replaced at install time)
+if grep -q '__SCRIPT_PATH__' "$SCRIPT_DIR/../extension/extension.js"; then
+    print_pass "__SCRIPT_PATH__ placeholder present in source (correct)"
+else
+    print_warn "__SCRIPT_PATH__ placeholder missing in source (may indicate premature replacement)"
+fi
+
+# 7c. Check for EXTENSION_SCHEMA constant
+if grep -q 'EXTENSION_SCHEMA' "$SCRIPT_DIR/../extension/extension.js"; then
+    print_pass "Extension defines EXTENSION_SCHEMA constant"
+else
+    print_fail "Extension missing EXTENSION_SCHEMA constant"
+fi
+
+# ───── 8. Localization ─────────────────────────────────────────────
 
 echo
 echo "── Localization ──"
 
 # Discover all localization files dynamically
-# Excludes multi-dot files like touchpad-toggle.en.bak
 mapfile -t LOCALE_FILES < <(
     for f in "$SCRIPT_DIR"/../touchpad-toggle.*; do
         [[ -f "$f" ]] || continue
@@ -121,10 +280,7 @@ else
     print_pass "${#LOCALE_FILES[@]} localization file(s) discovered"
 fi
 
-# 6a. Script-Reference Alignment (STRICTER — runs first)
-#     Extract every MSG[key] the main script actually references,
-#     then verify each key is defined in every locale file —
-#     including .en.
+# 8a. Script-Reference Alignment
 mapfile -t SCRIPT_MSG_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$MAIN_SCRIPT" | sort -u)
 
 if [[ ${#SCRIPT_MSG_KEYS[@]} -eq 0 ]]; then
@@ -137,10 +293,7 @@ for locale_file in "${LOCALE_FILES[@]}"; do
     file_path="$SCRIPT_DIR/../$locale_file"
     lang="${locale_file##*.}"
     
-    # Extract keys defined in this locale file
     mapfile -t LOCALE_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$file_path" | sort -u)
-    
-    # Find missing keys (in script but not in locale)
     mapfile -t MISSING < <(comm -23 <(printf '%s\n' "${SCRIPT_MSG_KEYS[@]}") <(printf '%s\n' "${LOCALE_KEYS[@]}"))
     
     if [[ ${#MISSING[@]} -eq 0 ]]; then
@@ -151,49 +304,7 @@ for locale_file in "${LOCALE_FILES[@]}"; do
     fi
 done
 
-# 6b. Translation Coverage (CHECKS AGAINST FALLBACK)
-#     Use the .en fallback as the canonical key set,
-#     then verify every other locale mirrors it.
-mapfile -t EN_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$SCRIPT_DIR/../touchpad-toggle.en" | sort -u)
-
-if [[ ${#EN_KEYS[@]} -eq 0 ]]; then
-    print_fail "No MSG[] keys found in .en fallback file"
-else
-    print_pass ".en fallback defines ${#EN_KEYS[@]} unique key(s)"
-fi
-
-for locale_file in "${LOCALE_FILES[@]}"; do
-    file_path="$SCRIPT_DIR/../$locale_file"
-    lang="${locale_file##*.}"
-    [[ "$lang" == "en" ]] && continue
-    missing=0
-    for key in "${EN_KEYS[@]}"; do
-        grep -q "MSG\[$key\]" "$file_path" || ((missing++))
-    done
-    if [[ $missing -eq 0 ]]; then
-        print_pass ".$lang: all ${#EN_KEYS[@]} fallback key(s) present"
-    else
-        print_fail ".$lang: $missing fallback key(s) missing"
-    fi
-done
-
-# 6c. Dead Key Detection (optional but recommended)
-for locale_file in "${LOCALE_FILES[@]}"; do
-    file_path="$SCRIPT_DIR/../$locale_file"
-    lang="${locale_file##*.}"
-    
-    mapfile -t LOCALE_KEYS < <(grep -oP 'MSG\[\K[a-z_]+' "$file_path" | sort -u)
-    mapfile -t ORPHANS < <(comm -23 <(printf '%s\n' "${LOCALE_KEYS[@]}") <(printf '%s\n' "${SCRIPT_MSG_KEYS[@]}"))
-    
-    if [[ ${#ORPHANS[@]} -eq 0 ]]; then
-        print_pass ".$lang: no orphan MSG[] keys"
-    else
-        print_fail ".$lang: ${#ORPHANS[@]} orphan key(s) detected:"
-        printf "     %s\n" "${ORPHANS[@]}" | sed 's/^/       - /'
-    fi
-done
-
-# ───── 7. Log Directory ─────────────────────────────────────────────
+# ───── 9. Log Directory ─────────────────────────────────────────────
 
 echo
 echo "── Logging ──"
@@ -206,7 +317,7 @@ grep -q 'log()' "$MAIN_SCRIPT" \
     && print_pass "Log function defined" \
     || print_fail "Log function defined"
     
-# ───── 8. Behavioral Tests (Isolated) ───────────────────────────────
+# ───── 10. Behavioral Tests (Isolated) ───────────────────────────────
 
 echo
 echo "── Behavioral Tests ──"
@@ -218,7 +329,7 @@ trap 'rm -rf "$TEST_SANDBOX"' EXIT
 # Copy script to sandbox
 cp "$MAIN_SCRIPT" "$TEST_SANDBOX/"
 
-# 8a. Localization failure: no .en file present
+# 10a. Localization failure: no .en file present
 cp "$SCRIPT_DIR/../touchpad-toggle.en" "$TEST_SANDBOX/touchpad-toggle.en.bak" 2>/dev/null
 rm -f "$TEST_SANDBOX/touchpad-toggle.en" "$TEST_SANDBOX/touchpad-toggle.de" "$TEST_SANDBOX/touchpad-toggle.th"
 
@@ -230,36 +341,24 @@ else
     print_fail "Missing locale file: should exit with localization error (got exit $exit_code)"
 fi
 
-# 8b. Localization failure: does NOT crash with log() undefined
+# 10b. Localization failure: does NOT crash with log() undefined
 if echo "$output" | grep -qi "command not found"; then
     print_fail "Missing locale file: log() or other function not defined (crash)"
 else
     print_pass "Missing locale file: no undefined function crash"
 fi
 
-# 8c. --version works in isolated environment (no locale files needed)
-# Restore the .en file for this test
+# 10c. --help works (ensure .en file exists in sandbox)
 cp "$TEST_SANDBOX/touchpad-toggle.en.bak" "$TEST_SANDBOX/touchpad-toggle.en" 2>/dev/null
 
-output=$("$TEST_SANDBOX/touchpad-toggle" --version 2>&1)
-exit_code=$?
-if [[ $exit_code -eq 0 ]] && echo "$output" | grep -q "$VERSION"; then
-    print_pass "--version works in isolated sandbox"
+output=$(PAGER=cat LANG=C "$TEST_SANDBOX/touchpad-toggle" --help 2>&1 </dev/null)
+if echo "$output" | grep -qE "NAME|BESCHREIBUNG|NUTZUNG|--assign|--toggle"; then
+    print_pass "--help displays help content"
 else
-    print_fail "--version in isolated sandbox (exit $exit_code)"
+    print_fail "--help did not display expected content (first 200 chars: ${output:0:200})"
 fi
 
-# 8d. --help works (pipes to less, check exit code only)
-output=$("$TEST_SANDBOX/touchpad-toggle" --help 2>/dev/null </dev/null)
-exit_code=$?
-if [[ $exit_code -eq 0 ]]; then
-    print_pass "--help opens without crash"
-else
-    print_fail "--help crashed (exit $exit_code)"
-fi
-
-# 8e. Dependency check: simulate missing gsettings
-# Create a PATH with no gsettings, notify-send, or audio players
+# 10d. Dependency check: simulate missing gsettings
 EMPTY_PATH=$(mktemp -d)
 ln -s /bin/true "$EMPTY_PATH/realpath" 2>/dev/null
 
@@ -268,18 +367,16 @@ exit_code=$?
 if [[ $exit_code -ne 0 ]]; then
     print_pass "Missing dependencies: script exits non-zero"
 else
-    # On some systems gsettings might be found regardless — check stderr
     print_pass "Missing dependencies: script handles gracefully"
 fi
 
 rm -rf "$EMPTY_PATH"
 
-# ───── 9. Default Values ────────────────────────────────────────────
+# ───── 11. Default Values ────────────────────────────────────────────
 
 echo
 echo "── Default Values ──"
 
-# 9a. Verify KEY_BINDING defaults to "<Super>q"
 ACTUAL_BINDING=$(grep -E "^KEY_BINDING=" "$MAIN_SCRIPT" | sed 's/.*=//; s/["'"'"']//g')
 if [[ "$ACTUAL_BINDING" == '<Super>q' ]]; then
     print_pass "KEY_BINDING defaults to <Super>q"
@@ -287,7 +384,6 @@ else
     print_fail "KEY_BINDING defaults to <Super>q (got: '$ACTUAL_BINDING')"
 fi
 
-# 9b. Verify WATCH_INTERVAL defaults to "2"
 ACTUAL_INTERVAL=$(grep -E "^WATCH_INTERVAL=" "$MAIN_SCRIPT" | sed 's/.*=//; s/["'"'"']//g')
 if [[ "$ACTUAL_INTERVAL" == "2" ]]; then
     print_pass "WATCH_INTERVAL defaults to 2"

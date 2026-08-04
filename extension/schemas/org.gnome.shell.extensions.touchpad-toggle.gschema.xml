@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="touchpad-toggle">
+  <schema id="org.gnome.shell.extensions.touchpad-toggle" path="/org/gnome/shell/extensions/touchpad-toggle/">
+    <key name="colored-icons" type="b">
+      <default>true</default>
+      <summary>Show colored icons in top bar</summary>
+      <description>Enable colored status icons (green/red/yellow). Disable for monochrome theme-following icons.</description>
+    </key>
+  </schema>
+</schemalist>

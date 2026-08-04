@@ -1,0 +1,9 @@
+{
+    "name": "Touchpad Toggle",
+    "uuid": "touchpad-toggle@rmltecdev",
+    "shell-version": ["45", "46", "47", "48", "49", "50"],
+    "description": "Show and toggle touchpad state from the top bar.",
+    "version": 2,
+    "url": "mailto:rmltecdev@pm.me",
+    "settings-schema": "org.gnome.shell.extensions.touchpad-toggle"
+}

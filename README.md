@@ -31,22 +31,28 @@ Invoke touchpad-toggle with one of these options:
 
 ## Purpose
 
-*Touchpad Toggle* is a utility designed to solve a common usability issue on laptops: accidental cursor movement or clicks while typing, potentially overwriting already written and edited text.  
-While many Desktop Environments offer a toggle switch in settings, accessing it is cumbersome and slow, *Touchpad Toggle* provides an instant mechanism to enable or disable the touchpad via a keyboard shortcut, accompanied by seamlessly integrated audible and visual feedback.  
-Uniquely, *Touchpad Toggle* includes self-management features, allowing the script to install and remove its own global keyboard shortcut within the GNOME environment without requiring manual GUI configuration.  
-If the touchpad stops responding because hardware layer freezes, the user may hard reset the input sub-system, invoking the script with the appropriate option `--reset` and elevated privileges.  
-*Touchpad Toggle* is free of charge, ad-free and open source.  
+*Touchpad Toggle* solves a common usability issue on laptops: accidental cursor movement or clicks while typing, which can displace the cursor and cause unintended text deletion or overwriting.  
+While many Desktop Environments offer touchpad toggle switches in settings, accessing them is cumbersome and slow. Touchpad Toggle provides instant mechanism to enable or disable the touchpad via a keyboard shortcut, accompanied by seamless audible feedback.  
+### Unique features include
+* **Self-managing keyboard shortcut**  
+  Install and remove global GNOME shortcut without manual GUI configuration.  
+* **GNOME Shell Extension**
+  Optional visual indicator in the top bar showing real-time touchpad state (enabled, disabled, or external-mouse mode).  
+* **Hard reset fallback**
+  If the touchpad stops responding due to hardware-layer freezes, recover via --reset with elevated privileges.
+* **Zero bloat**
+  Free, ad-free, and open source.  
 
 ### User Benefits
 
 * **Accidental Input Prevention**  
-*Touchpad Toggle* addresses the issue of accidental pointer movement while typing long documents, which can lead to cursor displacement and probable unintended text deletion.  
-
+  Eliminates cursor displacement while typing long documents.  
 * **Feedback**  
-*Touchpad Toggle* provides immediate audible and visual (notification) feedback upon state change with seamless GNOME desktop environment integration.
-
-* **Ease of Management**  
-*Touchpad Toggle* includes a Command Line Interface (CLI) for installation and status checks, removing the need for manual configuration of system files or navigating the depths of the system settings.  
+  Distinct sound cues confirm enabled vs. disabled state changes.  
+* **Visual Indicator (Optional)**  
+  Top bar icon shows current state without transient notifications.  
+* **CLI Management**  
+  Status checks and shortcut configuration without navigating system settings.  
 
 ## Prerequisites
 
@@ -56,17 +62,16 @@ To function correctly, the host system requires the following:
 
 * Any  [Linux](https://www.linux.org) distribution, based on [Debian](https://www.Debian.org/) or [Ubuntu](https://www.ubuntu.com/) with Bourne-again shell (v4.0 or higher recommended for associative array support) or compatible, such as [ZORIN OS](https://www.zorin.com/).  
 * [GNOME](https://www.gnome.org/) desktop environment and [Wayland](https://wayland.freedesktop.org/) display driver installed and in use.  
+* +Note:* X11 is supported for legacy purposes but not officially tested.  
 
 ### Dependencies  
 
-* `gsettings` (GLib command line interface, from `gsettings-desktop-schemas`)  
-* `notify-send` (libnotify)  
-* `realpath` (GNU coreutils)  
-* **Audio player**  
-   No configuration required — the script auto-detects what's available on your system at runtime.
-  * PipeWire: `pw-play`  
-  * PulseAudio: `paplay`  
-  * ALSA: `aplay`  
+* `gsettings` (GLib command line interface glib2.0, from `gsettings-desktop-schemas`); GNOME configuration interface  
+* `realpath` (GNU coreutils) for path resolution  
+* **Sound feedback (auto-detected)** — No configuration required; the script auto-detects the available audio player at runtime.  
+  * **PipeWire:** `pw-play` (from `pipewire-audio`)  
+  * **PulseAudio:** `paplay` (from `pulseaudio-utils`)  
+  * **ALSA:** `aplay` (from `alsa-utils`)  
 
 ## Functionality
 
@@ -79,10 +84,13 @@ Reads and writes the `send-events` key in the `org.gnome.desktop.peripherals.tou
 Self-installs by programmatically parsing and modifying the complex `custom-keybindings` array in GNOME settings to add or remove itself as a global shortcut (default: `<Super>q`).  
 
 3. **Feedback Loop**  
-Provides immediate confirmation via system notifications and distinct audible cues for "Enabled" vs "Disabled" states.  
+Provides immediate confirmation via distinct audible cues for "Enabled" vs "Disabled" states.  
 
 4. **Localization**  
 Automatically detects the system language (`$LANG`) and serves interface text; currently in generic English, generic German, or Thai.  
+
+5. **Interactive GNOME Extension**
+   This optional extension toggles touchpad enabled/disabled on left click. Right click activates mouse mode, which conveniently disables the touchpad when an external pointing device is detected by the system. When disconnecting the mouse, the touchpad will be enabled without user interaction.  
 
 ## Code  
 
@@ -99,55 +107,79 @@ This is the most complex logic: GNOME stores custom keybindings as a list of pat
 ### Localization Architecture  
 
 The external localization files use an associative array `MSG` to map keys to localized strings, ensuring easy translation updates. The logic probes presence of the fallback localization file and aborts if it is missing, prompting the user to ensure that language files are in same directory as the script.  
-
 The default fallback language is generic English `[en]`.  
 
-## Installation  
+## Installation
 
-1. **Download**  
-   Save the script file (e.g., to `~/bin/touchpad-toggle`) and ensure language files are saved to the same directory as script.  
+### Automatic Installation
 
-2. **Permissions**  
-   Make the script executable:
+The `install.sh` script automates the installation procedure:
 
 ```bash
-chmod +x ~/bin/touchpad-toggle
+# Clone or download the repository
+git clone <repository-url>
+cd touchpad-toggle
+ 
+# Run the installer
+./install.sh
 ```
 
-3. **Dependencies**  
-   Ensure required tools are installed (example for Debian/Ubuntu):  
+**Installer features**
+
+1. Auto-detects installation target `~/.local/bin or ~/bin`.  
+2. Checks dependencies and warns about missing audio players.  
+3. Copies main script and localization files.  
+4. Updates your shell profile if the target isn't in $PATH.  
+5. Offers GNOME Shell extension installation interactively.  
+   If you chose not to install the extension initially, you can run `./install.sh` again and accept the prompt to install it. Then **log out and log back in** for the extension to load.  
+
+### Manual installation
 
 ```bash
-sudo apt update
-sudo apt install libnotify-bin pulseaudio-utils
+# Make executable
+chmod +x touchpad-toggle
+
+# Copy to target directory
+cp touchpad-toggle ~/.local/bin/
+
+# Copy localization files
+cp touchpad-toggle.* ~/.local/bin/
+
+# Assign keyboard shortcut
+touchpad-toggle --assign
 ```
 
-4. **Audio Configuration (Advanced)**  
+### Post-Installation
+If you installed via `install.sh` and accepted the GNOME Shell extension, log out and log back in to load the extension.
 
-By default, the script auto-detects available sound files from standard Linux locations:  
+1. **Audio Configuration (Advanced)**  
 
-* `/usr/share/sounds/freedesktop/stereo/`
-* `/usr/share/sounds/ubuntu/stereo/`
-* `/usr/share/sounds/zorin/stereo/`
+   By default, the script auto-detects available sound files from standard Linux locations:  
 
-  **Custom Sound Files**  
-  To use custom sound files, uncomment and edit these variables near the top of the script:  
+   * `/usr/share/sounds/freedesktop/stereo/`
+   * `/usr/share/sounds/ubuntu/stereo/`
+   * `/usr/share/sounds/zorin/stereo/`
+
+2. **Custom Sound Files**  
+   To use custom sound files, uncomment and edit these variables near the top of the script:  
 
 ```bash
-TOUCHPAD_DISABLED="/path/to/custom-disabled.oga"  
-TOUCHPAD_ENABLED="/path/to/custom-enabled.oga"
+   TOUCHPAD_DISABLED="/path/to/custom-disabled.oga"  
+   TOUCHPAD_ENABLED="/path/to/custom-enabled.oga"
 ```
 
 Supported formats: `.oga`, `.ogg`, `.wav` (depending on your audio player).
 
 ## Usage
 
+### CLI
+
 The script is designed to run autonomously. Manual invocation provides status readouts and management options.  
 
 **Command** `./touchpad-toggle [OPTION]`
 
 * Invalid or no option  
-  Displays the current status of the touchpad and checks if the keyboard shortcut is active.  
+  Displays the current status of the touchpad and checks if the keyboard shortcut is assigned.  
 
 * `./touchpad-toggle --assign`  
   Assigns a permanent keyboard shortcut (Default: `<Super>q`).  
@@ -172,16 +204,46 @@ The script is designed to run autonomously. Manual invocation provides status re
 
 **Example Workflow**
 
-1. Invoke `./touchpad-toggle --assign` to assign the keyboard shortcut.
+1. **Install shortcut**  
+   Invoke `./touchpad-toggle --assign` to assign the keyboard shortcut.  
 
-2. Press `Super+Q` (`Windows Key + Q` or `Meta Key + Q`) to toggle the touchpad.
+2. **Toggle with keyboard**  
+   Press `Super+Q` (`WindowsKey+Q` or `MetaKey+Q`) to toggle the touchpad on/off.  
+
+3. **Check touchpad status anytime**  
+```bash
+   touchpad-toggle
+```
+
+### GNOME Shell Extension
+Touchpad Toggle includes an optional GNOME Shell extension providing a persistent visual indicator in the top bar.
+
+**Features**
+
+* **Left-click**  
+  Delegates to script → toggles touchpad with audible feedback.  
+* **Right-click**  
+  Cycles to/from "disabled-on-external-mouse" state.  
+* **Icon States**  
+  Green (enabled), red (disabled), yellow with mouse icon (external device detected).  
+* **Auto-update**  
+  Reflects touchpad state changes made externally (keyboard shortcut, system settings).  
+  
+### Color Rendering Note
+Symbolic icons in GNOME follow the theme's monochrome convention (black/white based on light/dark mode). While colored rendering (USE_COLORS = true) is implemented in the code, it may not display correctly depending on your GNOME version and theme. The extension remains fully functional regardless of color visibility.  
+
+### Extension Removal
+Via GNOME Extension Manager:  
+1. Open "Extensions" application.  
+2. Find "Touchpad Toggle".  
+3. Toggle off and click "Uninstall" (or remove manually from `~/.local/share/gnome-shell/extensions/`).  
 
 ## Troubleshooting  
 
 ### Common Errors  
 
 1. **Required system component is not installed**  
-The script checks for `gsettings`, `notify-send`, and the audio player. Install the missing package shown in the error message.  
+The script checks for `gsettings`, `realpath`, and an audio player (optional). Install the missing package shown in the error message.  
 Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.
 
 2. **Audio does not play**  
@@ -194,8 +256,8 @@ Alternatively, change the value of the variable `KEY_BINDING="<Super>q"` to the 
 4. **Touchpad does no longer respond to toggle command**  
 Invoking `./touchpad-toggle --reset` provides a critical fallback layer. While the standard toggle handles software states (GNOME settings), the reset option handles the kernel-level driver state, ensuring the user isn't stuck if the hardware layer freezes.  
 To reset the input sub-system hard reset, elevated privileges are required.  
-  *A Quick Technical Note*  
-  Executing `udevadm trigger -s` essentially forces the kernel to "replay" the device addition events for all input devices. This causes the display server (Wayland/X11) to re-initialize the touchpad driver stack without requiring a full system reboot – a much more efficient way to handle hardware hiccups.  
+*A Quick Technical Note*  
+Executing `udevadm trigger -s` essentially forces the kernel to "replay" the device addition events for all input devices. This causes the Wayland display server to re-initialize the touchpad driver stack without requiring a full system reboot – a much more efficient way to handle hardware hiccups.  
 
 ### Debugging  
 
@@ -205,7 +267,7 @@ If the script fails to execute or notifications do not appear, utilize these deb
 Insert `set -x` at the top of the bash script (below the shebang) or invoke it via bash with the `-x` flag:  
 
 ```bash
-bash -x ./touchpad-toggle --toggle
+   bash -x ./touchpad-toggle --toggle
 ```
 
 This forces the shell to print every command and its expanded arguments to standard output before execution, allowing you to trace exactly where a logic gate fails.  
@@ -221,7 +283,7 @@ This forces the shell to print every command and its expanded arguments to stand
     *Note*  
     Enabling this is useful for development but may cause the script to crash if an audio file is missing or a `gsettings` key is temporarily unavailable.  
     
-## Logging
+### Logging
 
 Following XDG Base Directory Specification, relevant script actions are logged to `~/.local/state/touchpad-toggle.log`. This includes:
 
@@ -231,7 +293,7 @@ Following XDG Base Directory Specification, relevant script actions are logged t
 * Audio player detection failures
 * Dependency check failures
 
-### Log Entry Format
+#### Log Entry Format
 
 Touchpad-Toggle events are logged in this format:
 
@@ -242,31 +304,31 @@ Touchpad-Toggle events are logged in this format:
 **Example:**
 
 ```bash
-[2026-08-01 17:45:33] [touchpad-toggle, v1.0.0-alpha] Keyboard shortcut <Super>q assigned.
-[2026-08-01 17:45:32] [touchpad-toggle, v1.0.0-alpha] Touchpad disabled.
+[2026-08-01 17:45:33] [touchpad-toggle, v1.0.0] Keyboard shortcut <Super>q assigned.
+[2026-08-01 17:45:32] [touchpad-toggle, v1.0.0] Touchpad disabled.
 ```
 
-### Useful Commands
+#### Useful Commands
 
 * View recent entries:*  
 
 ```bash
-tail -f ~/.local/state/touchpad-toggle.log
+   tail -f ~/.local/state/touchpad-toggle.log
 ```
 
 * Search for errors:
 
 ```bash
-grep "failed\|error" ~/.local/state/touchpad-toggle.log
+   grep "failed\|error" ~/.local/state/touchpad-toggle.log
 ```
 
 * Rotate/clear logs (optional):
 
 ```bash
-> ~/.local/state/touchpad-toggle/touchpad-toggle.log
+   ~/.local/state/touchpad-toggle/touchpad-toggle.log
 ```
 
-### Privacy Note
+#### Privacy Note
 
 Logs contain only script actions and state changes. No personal data, file contents, or keystroke patterns are recorded.
 
@@ -289,8 +351,7 @@ The script includes a built-in "Man Page" style help viewer.
 ### Disclaimer  
 
 Use at your own risk. Test thoroughly; your laptop's touchpad may unexpectedly stop responding due to variations and limitations in hardware and operating system.  
-This script is provided “as is”; there is NO WARRANTY at all. This is free software: you are free to modify it to your needs and redistribute it (see MIT License).  
-Due to ongoing development, this documentation might not reflect latest minor code changes.  
+This script is provided “as is”; there is NO WARRANTY at all. This is free software: you are free to modify it to your needs and redistribute it under the MIT License.  
   
 ### Author  
 
@@ -300,3 +361,7 @@ Contributions and feedback are welcome via [rmltecdev@pm.me](mailto:rmltecdev@pm
 ### License
 
 Licensed under the MIT License — see [LICENSE](LICENSE) for details.  
+
+### Version
+
+Current version: **1.1.0**
