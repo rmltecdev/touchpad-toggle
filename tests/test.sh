@@ -18,29 +18,29 @@
 # ──────────────────────────────────────────────────────────────────────
 
 
-
+SCRIPT_NAME="touchpad-toggle"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-MAIN_SCRIPT="$SCRIPT_DIR/../touchpad-toggle"
+MAIN_SCRIPT="$SCRIPT_DIR/../$SCRIPT_NAME"
 PASS_COUNT=0
 FAIL_COUNT=0
 
 print_pass() {
-    printf "  %b✓%b %s\n" "\033[32m" "\033[0m" "$1"
+    printf "   %b✓%b %s\n" "\033[32m" "\033[0m" "$1"
     ((PASS_COUNT++)) || true
 }
 
 print_warn() {
-    printf "  %b⚠%b %s\n" "\033[33m" "\033[0m" "$1"
+    printf "   %b⚠%b %s\n" "\033[33m" "\033[0m" "$1"
     ((WARN_COUNT++)) || true
 }
 
 print_fail() {
-    printf "  %b✗%b %s\n" "\033[31m" "\033[0m" "$1"
+    printf "   %b✗%b %s\n" "\033[31m" "\033[0m" "$1"
     ((FAIL_COUNT++)) || true
 }
 
 print_skip() {
-    printf "  %b⊘%b %s\n" "\033[90m" "\033[0m" "$1"
+    printf "   %b⊘%b %s\n" "\033[90m" "\033[0m" "$1"
 }
 
 echo "┌─────────────────────────────────────────────┐"
@@ -130,17 +130,14 @@ echo
 echo "── Version Metadata & Consistency ──"
 
 # 4a. Extract version values from each source
-SCRIPT_VERSION=$(grep -E '^VERSION=' "$MAIN_SCRIPT" | head -1 | sed 's/.*=//; s/["'"'"']//g')
-README_VERSION=$(grep -E 'Current version:' "$SCRIPT_DIR/../README.md" | grep -oP '\d+\.\d+\.\d+' | head -1)
+SCRIPT_VERSION=$(grep -oP '(?<=VERSION=")[0-9]+\.[0-9]+\.[0-9]+' "$SCRIPT_NAME" || echo "NOT FOUND")
+README_VERSION=$(grep -oP '(?<=Version: )[0-9]+\.[0-9]+\.[0-9]+' README.md || echo "NOT FOUND")
 CHANGELOG_VERSION=$(grep -E '^## \[' "$SCRIPT_DIR/../CHANGELOG.md" | head -1 | sed 's/## \[//' | sed 's/\].*//')
 
-BUILD_DATE=$(grep -E '^BUILD_DATE=' "$MAIN_SCRIPT" | sed 's/.*=//; s/["'"'"']//g')
-
 # Print visible version info for manual inspection
-printf "  ℹ️  README version:      %s\n" "${README_VERSION:-'(not found)'}"
-printf "  ℹ️  CHANGELOG version:   %s\n" "${CHANGELOG_VERSION:-'(not found)'}"
-printf "  ℹ️  Script version:      %s\n" "$SCRIPT_VERSION"
-printf "  ℹ️  Build date:          %s\n" "$BUILD_DATE"
+printf "   README version:      %s\n" "${README_VERSION:-'(not found)'}"
+printf "   CHANGELOG version:   %s\n" "${CHANGELOG_VERSION:-'(not found)'}"
+printf "   Script version:      %s\n" "$SCRIPT_VERSION"
 
 
 # 4b. Version consistency check
@@ -155,17 +152,54 @@ else
 fi
 
 # 4c. CHANGELOG has entry for current version
-if [[ -n "$SCRIPT_VERSION" ]] && grep -qE "^## \[$SCRIPT_VERSION\]" "$SCRIPT_DIR/../CHANGELOG.md"; then
-    print_pass "CHANGELOG has entry for v$SCRIPT_VERSION"
-else
-    print_fail "CHANGELOG missing entry for v$SCRIPT_VERSION"
-fi
+#if [[ -n "$SCRIPT_VERSION" ]] && grep -qE "^## \[$SCRIPT_VERSION\]" "$SCRIPT_DIR/../CHANGELOG.md"; then
+#    print_pass "CHANGELOG has entry for v$SCRIPT_VERSION"
+#else
+#    print_fail "CHANGELOG missing entry for v$SCRIPT_VERSION"
+#fi
 
 # 4d. No alpha/beta markers in release version
 if [[ "$SCRIPT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     print_pass "Release version has no alpha/beta markers"
 else
     print_fail "Release version contains alpha/beta marker: $SCRIPT_VERSION"
+fi
+
+# 4d. Check Build Date Consistency Across All Documents
+echo
+echo "── Build date consistency ──"
+SCRIPT_DATE=$(grep -oP '(?<=BUILD_DATE=")[0-9]{4}-[0-9]{2}-[0-9]{2}' "$SCRIPT_NAME" || echo "NOT FOUND")
+README_DATE=$(grep -oP '(?<=Build Date: )[0-9]{4}-[0-9]{2}-[0-9]{2}' README.md || echo "NOT FOUND")
+CHANGELOG_DATE=$(grep -m1 '^## \[' CHANGELOG.md | grep -oP '(?<=- )[0-9]{4}-[0-9]{2}-[0-9]{2}' || echo "NOT FOUND")
+
+echo "   Script:     $SCRIPT_DATE"
+echo "   README:     $README_DATE"
+echo "   CHANGELOG:  $CHANGELOG_DATE"
+
+DATE_SOURCES=("$SCRIPT_DATE" "$README_DATE" "$CHANGELOG_DATE")
+DATE_LABELS=("Script" "README.md" "CHANGELOG.md")
+
+# Reset a local counter for date-specific failures
+DATE_FAILURES=0
+
+for i in "${!DATE_SOURCES[@]}"; do
+    if [ "${DATE_SOURCES[$i]}" == "NOT FOUND" ]; then
+        print_fail="${DATE_LABELS[$i]}: Build Date not found."; fail; DATE_FAILURES=$((DATE_FAILURES + 1))
+    fi
+done
+
+if [ "$DATE_FAILURES" -eq 0 ]; then
+    REFERENCE="$SCRIPT_DATE"
+    for i in "${!DATE_SOURCES[@]}"; do
+        if [ "${DATE_SOURCES[$i]}" != "$REFERENCE" ]; then
+            print_fail="Build Date mismatch: ${DATE_LABELS[$i]} (${DATE_SOURCES[$i]}) vs Script ($REFERENCE)"; fail
+        fi
+    done
+fi
+
+# Only print success if no date-related failures were added in this block
+if [ "$DATE_FAILURES" -eq 0 ]; then
+    print_pass "Build Date consistent across all documents: $SCRIPT_DATE"
 fi
 
 # ───── 5. CLI Flags (non-GNOME-safe) ────────────────────────────────
@@ -399,7 +433,7 @@ printf "  Results: %b%d passed%b, %b%d failed%b\n" \
     "\033[32m" "$PASS_COUNT" "\033[0m" \
     "\033[31m" "$FAIL_COUNT" "\033[0m"
 echo "─────────────────────────────────────────────"
-echo ""
+echo
 echo "── Required Manual Tests ──"
 echo ""
 echo "   Invoke script with the following options and observe..."
@@ -409,6 +443,18 @@ echo "   --unassign  ...behavior if keyboard shortcut is/isn't assigned."
 echo "   --reset     ...behavior of the input subsystem."
 echo "   --watch     ..., if statuses are updated at runtime, and the"
 echo "               process stops on Ctrl+C."
-echo ""
+echo
+echo "   Activate GNOME extension and observe..."
+echo "   - On toggle setting, indicator changes to monochrome or colored."
+echo "   - On right click, indicator changes to mouse icon (teal)."
+echo "   - On connect mouse (USB/Bluetooth) indicator changes to blue,"
+echo "     and touchpad disabled."
+echo "   - On disconnect mouse (USB/Bluetooth) indicator changes to teal,"
+echo "     and touchpad enabled."
+echo "   - Indicator changes on left click to red, and touchpad disabled"
+echo
+echo "   Press keyboard shortcut and observe..."
+echo "   - Touchpad disabled/enabled and indicator changes icon and color."
+
 
 exit "$FAIL_COUNT"

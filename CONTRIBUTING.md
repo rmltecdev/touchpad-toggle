@@ -6,7 +6,7 @@ Thank you for your interest in improving Touchpad Toggle. This document outlines
 
 * GNOME desktop environment with Wayland
 * Bash 4.0+
-* `gsettings`, `notify-send`, `realpath`
+* `gsettings`, `realpath`
 * An audio player (`pw-play`, `paplay`, or `aplay`)
 
 ## Development Setup

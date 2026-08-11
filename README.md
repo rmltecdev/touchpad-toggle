@@ -60,12 +60,20 @@ Eliminates cursor displacement while typing long documents.
 
 #### Audible and Visual Feedback
 
-* Distinct sound cues confirm enabled vs. disabled state changes.  
-* Optional visual indicator in GNOME taskbar or top bar, colored or monochrome.
+Distinct sound cues confirm enabled vs. disabled state changes.  
 
 #### Visual Indicator (Optional)
 
-Top bar icon shows current state without transient notifications.  
+GNOME top bar icon shows current state of touchpad and mouse mode without transient notifications.  
+The visual indicator can be displayed in color or monochrome via the GNOME extension settings.
+
+##### Known Limitations
+
+* **External Mouse Detection Delay**  
+  Bluetooth devices may require 5 – 15 seconds to fully enumerate after connection due to pairing handshake timing. USB devices connect instantly.  
+
+* **Wayland Only**  
+  X11 support is experimental; external mouse detection relies on Wayland's seat API.
 
 #### CLI Management
 
@@ -247,11 +255,15 @@ Touchpad Toggle includes an optional GNOME Shell extension providing a persisten
 * **Left-click**  
   Delegates to script → toggles touchpad with audible feedback.  
 * **Right-click**  
-  Cycles to/from "disabled-on-external-mouse" state.  
+  Cycles to/from "disabled-on-external-mouse" mode.  
 * **Icon States**  
-  Green (enabled), red (disabled), yellow with mouse icon (external device detected).  
+  * Red touchpad icon: touchpad disabled;  
+  * Blue touchpad icon: touchpad enabled;  
+  * Blue mouse icon: mouse mode, external device detected, touchpad disabled;  
+  * Teal mouse icon: mouse mode stand-by, external device not detected, touchpad enabled.  
+  
 * **Auto-update**  
-  Reflects touchpad state changes made externally (keyboard shortcut, system settings).  
+  Reflects touchpad state changes made externally (keyboard shortcut, system settings, TUI).  
 
 #### Extension Removal
 Via GNOME Extension Manager:  
@@ -386,4 +398,5 @@ Licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
 ### Version
 
-Current version: **1.1.0**
+Version: 1.1.1  
+Build Date: 2026-08-11  

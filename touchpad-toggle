@@ -37,6 +37,10 @@
 
 # ───── Variables declaration ──────────────────────────────────────────
 
+# Version metadata
+VERSION="1.1.1"
+BUILD_DATE="2026-08-11"
+
 # Global Environment
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
@@ -48,9 +52,7 @@ WATCH_INTERVAL="2"
 TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
 TOUCHPAD_ENABLED="/usr/share/sounds/zorin/stereo/device-added.oga"
 
-# Version metadata
-VERSION="1.1.0"
-BUILD_DATE="2026-08-04"
+
 
 # Environment
 GSETTINGS_SCHEMA="org.gnome.desktop.peripherals.touchpad"
@@ -504,6 +506,7 @@ show_version() {
     printf "  %-14s %s\n" "${MSG[info_version]}:" "$VERSION"
     printf "  %-14s %s\n" "${MSG[info_build_date]}:" "$BUILD_DATE"
     printf "  %-14s %s\n" "${MSG[info_path]}:" "$SCRIPT_PATH"
+    log "● Script version showed."
     exit 0
 }
 

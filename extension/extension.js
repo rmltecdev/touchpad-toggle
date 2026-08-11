@@ -22,8 +22,8 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // ─── Configuration ───────────────────────────────────────────────
 
-const TOUCHPAD_SCHEMA = 'org.gnome.desktop.peripherals.touchpad';
-const TOUCHPAD_KEY    = 'send-events';
+const TOUCHPAD_SCHEMA  = 'org.gnome.desktop.peripherals.touchpad';
+const TOUCHPAD_KEY     = 'send-events';
 const EXTENSION_SCHEMA = 'org.gnome.shell.extensions.touchpad-toggle';
 
 const SCRIPT_PATH = '__SCRIPT_PATH__';
@@ -37,9 +37,10 @@ const ICON_EXTERNAL_MOUSE = 'input-mouse-symbolic';
 // ─── Colors ───────────────────────────────────────────────────────
 
 const COLORS = {
-    enabled:         '#009900',  // green
-    disabled:        '#FF3A3F',  // red
-    external_mouse:  '#FBB716',  // yellow
+    disabled:           '#FF3A3F',  // red  — touchpad deliberately disabled
+    enabled:            '#0780DA',  // blue — touchpad enabled
+    external_active:    '#0780DA',  // blue — mouse detected, touchpad disabled
+    external_standby:   '#0CA5A5',  // teal — mouse mode standby, no mouse detected
 };
 
 // ─── Panel Button ────────────────────────────────────────────────
@@ -54,14 +55,15 @@ class TouchpadIndicator extends PanelMenu.Button {
             schema_id: TOUCHPAD_SCHEMA,
         });
 
-        // Extension preferences — passed from Extension class
         this._ext_settings = extSettings;
 
         this._icon = new St.Icon({
-            icon_name:    ICON_ENABLED,
-            style_class:  'system-status-icon',
+            icon_name:   ICON_ENABLED,
+            style_class: 'system-status-icon',
         });
         this.add_child(this._icon);
+
+        this._externalMousePresent = false;
 
         this._settingsId = this._settings.connect(
             `changed::${TOUCHPAD_KEY}`,
@@ -73,18 +75,105 @@ class TouchpadIndicator extends PanelMenu.Button {
             () => this._updateIcon(),
         );
 
+        // ── External mouse detection via Clutter Seat ──
+        try {
+            this._seat = Clutter.get_default_backend().get_default_seat();
+
+            this._deviceAddedId = this._seat.connect(
+                'device-added',
+                (_seat, _device) => this._onDeviceChanged(),
+            );
+            this._deviceRemovedId = this._seat.connect(
+                'device-removed',
+                (_seat, _device) => this._onDeviceChanged(),
+            );
+
+            log('Touchpad Toggle: Extension loaded.');
+        } catch (e) {
+            log(`Touchpad Toggle: seat unavailable, mouse detection disabled: ${e}`);
+            this._seat = null;
+        }
+
         this._clickId = this.connect(
             'button-press-event',
             this._onButtonPress.bind(this),
         );
 
+        this._refreshExternalMouse();
         this._updateIcon();
     }
 
     // ── State helpers ───────────────────────────────────────────
 
     _getState() {
+        if (!this._settings) return 'disabled';
         return this._settings.get_string(TOUCHPAD_KEY);
+    }
+
+    // ── External mouse detection ─────────────────────────────────
+
+    _detectExternalMouse() {
+        if (!this._seat) return false;
+
+        let externalVendors = new Set();
+
+        try {
+            const [ok, contents] = GLib.file_get_contents('/proc/bus/input/devices');
+            if (ok) {
+                const text = new TextDecoder().decode(contents);
+                const blocks = text.split('\n\n');
+
+                for (const block of blocks) {
+                    const busMatch = block.match(/Bus=(\w+)/);
+                    const vendorMatch = block.match(/Vendor=(\w+)/);
+                    const handlersMatch = block.match(/Handlers=(.+)/);
+
+                    if (busMatch && vendorMatch && handlersMatch) {
+                        const bus = busMatch[1];
+                        const vendor = vendorMatch[1].toLowerCase();
+                        const handlers = handlersMatch[1];
+
+                        if ((bus === '0003' || bus === '0005') && handlers.includes('mouse')) {
+                            externalVendors.add(vendor);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            return false;
+        }
+
+        try {
+            const devices = this._seat.list_devices();
+            if (!devices || devices.length === 0) return false;
+
+            for (let i = 0; i < devices.length; i++) {
+                if (devices[i].get_device_type() === Clutter.InputDeviceType.POINTER_DEVICE) {
+                    const vendor = (devices[i].get_vendor_id?.() ?? '').toLowerCase();
+                    if (vendor && vendor !== '0' && vendor !== '' && externalVendors.has(vendor)) {
+                        return true;
+                    }
+                }
+            }
+        } catch (e) {
+            return false;
+        }
+
+        return false;
+    }
+
+    _refreshExternalMouse() {
+        const wasPresent = this._externalMousePresent;
+        this._externalMousePresent = this._detectExternalMouse();
+
+        if (wasPresent !== this._externalMousePresent &&
+            this._getState() === 'disabled-on-external-mouse') {
+            this._updateIcon();
+        }
+    }
+
+    _onDeviceChanged() {
+        this._refreshExternalMouse();
     }
 
     // ── Icon update ──────────────────────────────────────────────
@@ -94,23 +183,24 @@ class TouchpadIndicator extends PanelMenu.Button {
         const useColors = this._ext_settings.get_boolean('colored-icons');
 
         let iconName;
-        let color   = null;
+        let color = null;
 
         switch (state) {
-
             case 'enabled':
                 iconName = ICON_ENABLED;
-                color    = COLORS.enabled;
+                color = COLORS.enabled;
                 break;
 
             case 'disabled-on-external-mouse':
                 iconName = ICON_EXTERNAL_MOUSE;
-                color    = COLORS.external_mouse;
+                color = this._externalMousePresent
+                    ? COLORS.external_active
+                    : COLORS.external_standby;
                 break;
 
-            default:  // 'disabled'
+            default:
                 iconName = ICON_DISABLED;
-                color    = COLORS.disabled;
+                color = COLORS.disabled;
                 break;
         }
 
@@ -124,23 +214,12 @@ class TouchpadIndicator extends PanelMenu.Button {
         const button = event.get_button();
 
         if (button === Clutter.BUTTON_PRIMARY) {
-
-            // Left-click → delegate to the bash script.
-            // This preserves the full feedback loop: audio cue + notification.
-            //
-            // The script toggles enabled ↔ disabled only (not the external-mouse
-            // state), which is the expected behaviour for a quick toggle.
             try {
                 GLib.spawn_command_line_async(`'${SCRIPT_PATH}' --toggle`);
             } catch (e) {
                 log(`Touchpad Toggle: failed to launch script: ${e}`);
             }
-
         } else if (button === Clutter.BUTTON_SECONDARY) {
-
-            // Right-click → cycle to/from 'disabled-on-external-mouse'.
-            // Managed directly via GSettings (the script does not handle
-            // this third state).  The icon change is the visual feedback.
             const current = this._getState();
 
             if (current === 'disabled-on-external-mouse') {
@@ -164,12 +243,23 @@ class TouchpadIndicator extends PanelMenu.Button {
             this._ext_settings.disconnect(this._extSettingsId);
             this._extSettingsId = null;
         }
+        if (this._seat && this._deviceAddedId) {
+            this._seat.disconnect(this._deviceAddedId);
+            this._deviceAddedId = null;
+        }
+        if (this._seat && this._deviceRemovedId) {
+            this._seat.disconnect(this._deviceRemovedId);
+            this._deviceRemovedId = null;
+        }
         if (this._clickId) {
             this.disconnect(this._clickId);
             this._clickId = null;
         }
+
         this._settings = null;
         this._ext_settings = null;
+        this._seat = null;
+
         super.destroy();
     }
 });

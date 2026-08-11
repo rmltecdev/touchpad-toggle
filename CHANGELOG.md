@@ -5,7 +5,32 @@ All notable changes to `touchpad-toggle` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-08-11
+
+### Added
+* **Robust External Mouse Detection** — USB/Bluetooth pointer identification via `/proc/bus/input/devices` bus filtering (portable across hardware configurations)
+* **GNOME 46 Compatibility** — Migration to `Clutter.get_default_backend().get_default_seat()` API
+* **Color Customization** — Extended icon color scheme options (enabled/disabled/external-mouse modes)
+
+### Changed
+* **Visual Feedback** — External-mouse standby color changed from amber to teal (`#0CA5T`) for reduced visual distraction
+* **Icon States** — Blue indicates active state (both touchpad and external mouse), teal indicates standby (mouse mode without detected device)
+* **Extension Architecture** — Hardcoded script path replaced with template placeholder for installer substitution
+* **Logging** — Reduced debug verbosity for production release
+
+### Fixed
+* **GNOME 46 API Migration** — `global.backend.get_default_seat()` → `Clutter.get_default_backend().get_default_seat()`
+* **Device Enumeration** — `get_devices()` → `list_devices()` method call correction
+* **Virtual Pointer Filtering** — Internal touchpad companion pointers excluded from external mouse detection via vendor cross-referencing
+* **Hardware-Specific False Positives** — Framework laptop wireless radio control module (`32ac:0006`) correctly distinguished from external mice
+
+### Security
+* No changes to security posture from v1.1.0
+
+---
+
 ## [1.1.0] - 2026-08-04
+[... unchanged ...]
 
 ### Added
 * **GNOME Shell Extension** — Optional top bar status indicator with three-state visual representation (enabled/disabled/external-mouse)
