@@ -5,6 +5,24 @@ All notable changes to `touchpad-toggle` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-08-13
+
+### Fixed
+* **ShellCheck Compliance** — Resolved all 11 static analysis warnings:
+  - Removed unused variable `DCONF_PATH` (SC2034)
+  - Added SC1090 directives for dynamic locale sourcing
+  - Fixed printf format string mismatches (SC2183) in dependency check, shortcut assignment, and watch mode
+  - Replaced variables in printf format strings with proper `%s`/`%b` placeholders (SC2059)
+  - Eliminated SC2154 by globalizing `APP_TITLE` constant
+
+### Changed
+* **Notification Branding** — Replaced localized `MSG[header]` with global constant `APP_TITLE` for consistent notification identity across locales
+* **Logging** — Added shortcut status logging to `check_shortcut()` and version display logging to `show_version()`
+* **Dependency Check** — Removed `notify-send` from required dependencies (notifications handled by GNOME Shell extension)
+
+### Removed
+* **Localization Keys** — Eliminated `MSG[header]` and `MSG[assign_gnome_name]` from all locale files and `MESSAGES.md`
+
 ## [1.1.1] - 2026-08-11
 
 ### Added
@@ -30,7 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [1.1.0] - 2026-08-04
-[... unchanged ...]
 
 ### Added
 * **GNOME Shell Extension** — Optional top bar status indicator with three-state visual representation (enabled/disabled/external-mouse)

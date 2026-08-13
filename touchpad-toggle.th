@@ -26,7 +26,8 @@
 # man-page style help
 read -r -d '' MSG_HELP_TEXT <<EOF
 ชื่อ
-    สลับทัชแพดของแล็ปท็อปของคุณ (Touchpad Toggle)
+    Touchpad Toggle
+    สลับทัชแพดของแล็ปท็อปของคุณ
 
 คำอธิบาย
     เปิด/ปิดใช้งานทัชแพดเพื่อป้องกันการเคลื่อนที่ของตัวชี้โดยไม่ตั้งใจ
@@ -84,7 +85,6 @@ MSG[check_not_detected]="ไม่พบ"
 MSG[check_status_label]="สถานะแป้นพิมพ์ลัด "
 MSG[error_no_audio]="ไม่พบระบบเสียง"
 MSG[error_tool]="ส่วนประกอบระบบที่จำเป็นไม่ได้ติดตั้ง"
-MSG[header]="≡ สลับการใช้งานทัชแพด ≡"
 MSG[help_close]="ปิดหน้าช่วยเหลือแล้ว"
 MSG[help_open]="กำลังเปิดหน้าช่วยเหลือ..."
 MSG[help_text]="$MSG_HELP_TEXT"

@@ -398,5 +398,5 @@ Licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
 ### Version
 
-Version: 1.1.1  
-Build Date: 2026-08-11  
+Version: 1.1.2  
+Build Date: 2026-08-13  

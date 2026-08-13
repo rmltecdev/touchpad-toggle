@@ -56,7 +56,7 @@ echo "── File Integrity ──"
 [[ -x "$MAIN_SCRIPT" ]] && print_pass "Main script is executable" || print_fail "Main script is executable"
 
 for lang in en de th; do
-    [[ -f "$SCRIPT_DIR/../touchpad-toggle.$lang" ]] \
+    [[ -f "$SCRIPT_DIR/../$SCRIPT_NAME.$lang" ]] \
         && print_pass "Localization file .$lang exists" \
         || print_fail "Localization file .$lang exists"
 done
@@ -99,7 +99,7 @@ bash -n "$MAIN_SCRIPT" 2>/dev/null \
     || print_fail "Main script: valid Bash syntax"
 
 for lang in en de th; do
-    bash -n "$SCRIPT_DIR/../touchpad-toggle.$lang" 2>/dev/null \
+    bash -n "$SCRIPT_DIR/../$SCRIPT_NAME.$lang" 2>/dev/null \
         && print_pass "Localization .$lang: valid Bash syntax" \
         || print_fail "Localization .$lang: valid Bash syntax"
 done
@@ -184,7 +184,7 @@ DATE_FAILURES=0
 
 for i in "${!DATE_SOURCES[@]}"; do
     if [ "${DATE_SOURCES[$i]}" == "NOT FOUND" ]; then
-        print_fail="${DATE_LABELS[$i]}: Build Date not found."; fail; DATE_FAILURES=$((DATE_FAILURES + 1))
+        print_fail "${DATE_LABELS[$i]}: Build Date not found."; fail; DATE_FAILURES=$((DATE_FAILURES + 1))
     fi
 done
 
@@ -192,7 +192,7 @@ if [ "$DATE_FAILURES" -eq 0 ]; then
     REFERENCE="$SCRIPT_DATE"
     for i in "${!DATE_SOURCES[@]}"; do
         if [ "${DATE_SOURCES[$i]}" != "$REFERENCE" ]; then
-            print_fail="Build Date mismatch: ${DATE_LABELS[$i]} (${DATE_SOURCES[$i]}) vs Script ($REFERENCE)"; fail
+            print_fail "Build Date mismatch: ${DATE_LABELS[$i]} (${DATE_SOURCES[$i]}) vs Script ($REFERENCE)"; fail
         fi
     done
 fi
@@ -301,7 +301,7 @@ echo "── Localization ──"
 
 # Discover all localization files dynamically
 mapfile -t LOCALE_FILES < <(
-    for f in "$SCRIPT_DIR"/../touchpad-toggle.*; do
+    for f in "$SCRIPT_DIR"/../$SCRIPT_NAME.*; do
         [[ -f "$f" ]] || continue
         [[ "$(basename "$f")" == *.*.* ]] && continue
         basename "$f"
@@ -364,10 +364,10 @@ trap 'rm -rf "$TEST_SANDBOX"' EXIT
 cp "$MAIN_SCRIPT" "$TEST_SANDBOX/"
 
 # 10a. Localization failure: no .en file present
-cp "$SCRIPT_DIR/../touchpad-toggle.en" "$TEST_SANDBOX/touchpad-toggle.en.bak" 2>/dev/null
-rm -f "$TEST_SANDBOX/touchpad-toggle.en" "$TEST_SANDBOX/touchpad-toggle.de" "$TEST_SANDBOX/touchpad-toggle.th"
+cp "$SCRIPT_DIR/../$SCRIPT_NAME.en" "$TEST_SANDBOX/$SCRIPT_NAME.en.bak" 2>/dev/null
+rm -f "$TEST_SANDBOX/$SCRIPT_NAME.en" "$TEST_SANDBOX/$SCRIPT_NAME.de" "$TEST_SANDBOX/$SCRIPT_NAME.th"
 
-output=$("$TEST_SANDBOX/touchpad-toggle" 2>&1)
+output=$("$TEST_SANDBOX/$SCRIPT_NAME" 2>&1)
 exit_code=$?
 if [[ $exit_code -ne 0 ]] && echo "$output" | grep -qi "Localization error"; then
     print_pass "Missing locale file: exits with error message"
@@ -383,9 +383,9 @@ else
 fi
 
 # 10c. --help works (ensure .en file exists in sandbox)
-cp "$TEST_SANDBOX/touchpad-toggle.en.bak" "$TEST_SANDBOX/touchpad-toggle.en" 2>/dev/null
+cp "$TEST_SANDBOX/$SCRIPT_NAME.en.bak" "$TEST_SANDBOX/$SCRIPT_NAME.en" 2>/dev/null
 
-output=$(PAGER=cat LANG=C "$TEST_SANDBOX/touchpad-toggle" --help 2>&1 </dev/null)
+output=$(PAGER=cat LANG=C "$TEST_SANDBOX/$SCRIPT_NAME" --help 2>&1 </dev/null)
 if echo "$output" | grep -qE "NAME|BESCHREIBUNG|NUTZUNG|--assign|--toggle"; then
     print_pass "--help displays help content"
 else
@@ -396,7 +396,7 @@ fi
 EMPTY_PATH=$(mktemp -d)
 ln -s /bin/true "$EMPTY_PATH/realpath" 2>/dev/null
 
-output=$(PATH="$EMPTY_PATH" "$TEST_SANDBOX/touchpad-toggle" 2>&1 <<< "")
+output=$(PATH="$EMPTY_PATH" "$TEST_SANDBOX/$SCRIPT_NAME" 2>&1 <<< "")
 exit_code=$?
 if [[ $exit_code -ne 0 ]]; then
     print_pass "Missing dependencies: script exits non-zero"

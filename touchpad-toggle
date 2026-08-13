@@ -37,9 +37,12 @@
 
 # ───── Variables declaration ──────────────────────────────────────────
 
-# Version metadata
-VERSION="1.1.1"
-BUILD_DATE="2026-08-11"
+# App Title
+APP_TITLE="≡ Touchpad Toggle ≡"
+
+# Version Metadata
+VERSION="1.1.2"
+BUILD_DATE="2026-08-13"
 
 # Global Environment
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -52,21 +55,17 @@ WATCH_INTERVAL="2"
 TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
 TOUCHPAD_ENABLED="/usr/share/sounds/zorin/stereo/device-added.oga"
 
-
-
 # Environment
 GSETTINGS_SCHEMA="org.gnome.desktop.peripherals.touchpad"
 GSETTINGS_KEY="send-events"
 MEDIA_KEYS_SCHEMA="org.gnome.settings-daemon.plugins.media-keys"
-DCONF_PATH="/org/gnome/desktop/peripherals/touchpad/send-events"
 SCRIPT_PATH=$(realpath -s "$0")    # realpath -s: Returns absolute path but DOES NOT resolve symlinks.
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 
 # Logging
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
-RUNTIME_LOG="$LOG_DIR/touchpad-toggle.log"
-
+RUNTIME_LOG="$LOG_DIR/$SCRIPT_NAME.log"
 
 # Status Indicators
 INDICATOR_FAIL="\033[31m■ "
@@ -91,6 +90,14 @@ log() {
 
 
 
+# ───── Show Header ────────────────────────────────────────────────────
+
+show_header() {
+    printf "\n%b%b%b\n\n" "${FORMATTING_HEADER}" "${APP_TITLE}" "${FORMATTING_RESET}"
+}
+
+
+
 # ───── Localization ───────────────────────────────────────────────────
 
 # Detect system language (default to 'en' if detection fails)
@@ -102,25 +109,19 @@ LOCALE_FILE="${SCRIPT_DIR}/${SCRIPT_NAME}.${SYSTEM_LANG}"
 FALLBACK_FILE="${SCRIPT_DIR}/${SCRIPT_NAME}.en"
 
 if [[ -f "$LOCALE_FILE" ]]; then
+    # shellcheck disable=SC1090
     source "$LOCALE_FILE"
 elif [[ -f "$FALLBACK_FILE" ]]; then
+    # shellcheck disable=SC1090
     source "$FALLBACK_FILE"
 else
-    printf "\n%b%b%b\n" "${FORMATTING_HEADER}" "≡ Touchpad Toggle ≡" "${FORMATTING_RESET}"
+    show_header
     printf "\n%b%b%b\n" "$INDICATOR_FAIL" "Localization error" "${FORMATTING_RESET}"
-    printf "  Missing fallback file '$FALLBACK_FILE'.\n"
+    printf "  Missing fallback file %s.\n" "$FALLBACK_FILE"
     printf "  Ensure language files are in same directory as script.\n\n"
     log "■ Localization failed."
     exit 1
 fi
-
-
-
-# ───── Show Header ────────────────────────────────────────────────────
-
-show_header() {
-    printf "\n%b%b%b\n\n" "${FORMATTING_HEADER}" "${MSG[header]}" "${FORMATTING_RESET}"
-}
 
 
 
@@ -199,6 +200,7 @@ detect_audio_system() {
 # ───── Dependency Check ───────────────────────────────────────────────
 
 check_dependencies() {
+    local -a tools=("gsettings" "realpath")
 
     # Only check audio player if it was detected/set
     if [[ -n "${AUDIO_PLAYER:-}" ]]; then
@@ -208,9 +210,9 @@ check_dependencies() {
     for tool in "${tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             tool_name="${tool##*/}"
-            printf "%b%b%b %b%s%b\n" "${notify_app_title}" "${INDICATOR_FAIL}" "${FORMATTING_RESET}" \
+            printf "%b%b%b %b%b%s%b\n\n" "${APP_TITLE}" "${INDICATOR_FAIL}" "${FORMATTING_RESET}" \
                 "${MSG[error_tool]}" "${FORMATTING_BOLD}" "$tool_name" "${FORMATTING_RESET}" >&2
-            printf "  %b %b%b%b\n\n" "${notify_app_title}" "${MSG[install_hint]}" \
+            printf "  %b %b%b%s%b\n\n" "${APP_TITLE}" "${MSG[install_hint]}" \
                 "${FORMATTING_BOLD}" "$tool_name" "${FORMATTING_RESET}"
             log "■ Dependencies missing."
             exit 1
@@ -243,7 +245,7 @@ toggle_touchpad() {
     
     if [ "${current_state}" = "'enabled'" ]; then
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'disabled'"
-        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" 
+        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" &
         log "▲ Touchpad disabled."
     else
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'enabled'"
@@ -277,7 +279,7 @@ check_state() {
 # Check Keyboard Shortcut
 
 check_shortcut() {
-    # Returns exit code 0 (success) if found, ext code 1 (failure) if not found.
+    # Returns exit code 0 (success) if found, exit code 1 (failure) if not found.
     # Also prints status to stdout.
     local binding_list
     binding_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings)
@@ -298,14 +300,15 @@ check_shortcut() {
 
             # Localized Output
             printf "$INFO_PAD   %b%b%b → %b%b%b\n" "${MSG[check_status_label]}" "${INDICATOR_PASS}" "${MSG[check_assign]}" "${FORMATTING_RESET}" "${FORMATTING_BOLD}" "${current_binding}" "${FORMATTING_RESET}"
+            log "● Keyboard shortcut assigned."
             return 0
         fi
     done
 
     # Localized Output
-    printf "$INFO_PAD   %b%b%b\n" "${MSG[check_status_label]}" "${INDICATOR_FAIL}" "${MSG[check_not_detected]}" "${FORMATTING_RESET}"
-    printf "$INFO_PAD   ${MSG[check_invoke_hint]}\n"
-    printf " "
+    printf "%s   %b%s%b\n" "${MSG[check_status_label]}" "${INDICATOR_FAIL}" "${MSG[check_not_detected]}" "${FORMATTING_RESET}"
+    printf "%s\n" "${MSG[check_invoke_hint]}"
+    log "■ Keyboard shortcut not detected"
     return 1
 }
 
@@ -393,7 +396,7 @@ assign_shortcut() {
     if check_shortcut > /dev/null; then
         # Localized Output
         printf "%b%b%b\n" "${INDICATOR_WARN}" "${MSG[assign_abort_title]}" "${FORMATTING_RESET}"
-        printf "%b\n%s\n" "${MSG[assign_abort_msg]}"
+        printf "%b\n" "${MSG[assign_abort_msg]}"
         return
     fi
 
@@ -421,7 +424,7 @@ assign_shortcut() {
 
     # Localized Output
     printf "%b%b%s %b%b%b\n" "${INDICATOR_PASS}" "${FORMATTING_RESET}" "${MSG[assign_success]}" "${FORMATTING_BOLD}" "${KEY_BINDING}" "${FORMATTING_RESET}"
-    printf "%b%s\n\n" "${MSG[assign_instructions]}"
+    printf "%b\n\n" "${MSG[assign_instructions]}"
     log "● Keyboard shortcut ${KEY_BINDING} assigned."
 }
 
@@ -491,10 +494,10 @@ display_info() {
 # ───── Watch Script ───────────────────────────────────────────────────
 
 watch_script() {
-    printf "${MSG[watch_start]}"
+    printf "%b" "${MSG[watch_start]}"
     log "● Watching script…"
     watch --no-wrap --color --interval "$WATCH_INTERVAL" "$SCRIPT_PATH"
-    printf "${MSG[watch_stop]}"
+    printf "%b" "${MSG[watch_stop]}"
     log "● Script watching ended."
 }
 

@@ -27,6 +27,7 @@
 # man-page style help
 read -r -d '' MSG_HELP_TEXT <<EOF
 NAME
+    Touchpad Toggle
     Der Touchpad-Umschalter für Ihren Laptop (Touchpad Toggle)
 
 BESCHREIBUNG
@@ -88,7 +89,6 @@ MSG[check_not_detected]="Nicht erkannt"
 MSG[check_status_label]="Tastenkombination"
 MSG[error_no_audio]="Kein Audiosystem erkannt."
 MSG[error_tool]="Erforderliche Systemkomponente nicht installiert:"
-MSG[header]="≡ Touchpad-Umschalter ≡"
 MSG[help_close]="Hilfe geschlossen."
 MSG[help_open]="Öffne Hilfe..."
 MSG[help_text]="$MSG_HELP_TEXT"

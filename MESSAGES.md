@@ -15,12 +15,6 @@ the key, its purpose, context of use, and visibility.
 
 ## Key Catalog
 
-### Header & Branding
-
-| Key | Visibility | Description |
-|-----|-----------|-------------|
-| `header` | CLI | ASCII banner displayed at script start |
-
 ### Help System
 
 | Key | Visibility | Description |
