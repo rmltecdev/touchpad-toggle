@@ -41,8 +41,8 @@
 APP_TITLE="≡ Touchpad Toggle ≡"
 
 # Version Metadata
-VERSION="1.1.2"
-BUILD_DATE="2026-08-13"
+VERSION="1.2.0"
+BUILD_DATE="2026-08-22"
 
 # Global Environment
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -50,10 +50,6 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Configuration
 KEY_BINDING="<Super>q"
 WATCH_INTERVAL="2"
-
-# User specific sounds
-TOUCHPAD_DISABLED="/usr/share/sounds/zorin/stereo/device-removed.oga"
-TOUCHPAD_ENABLED="/usr/share/sounds/zorin/stereo/device-added.oga"
 
 # Environment
 GSETTINGS_SCHEMA="org.gnome.desktop.peripherals.touchpad"
@@ -116,7 +112,7 @@ elif [[ -f "$FALLBACK_FILE" ]]; then
     source "$FALLBACK_FILE"
 else
     show_header
-    printf "\n%b%b%b\n" "$INDICATOR_FAIL" "Localization error" "${FORMATTING_RESET}"
+    printf "%b%b%b\n" "$INDICATOR_FAIL" "Localization error" "${FORMATTING_RESET}"
     printf "  Missing fallback file %s.\n" "$FALLBACK_FILE"
     printf "  Ensure language files are in same directory as script.\n\n"
     log "■ Localization failed."
@@ -158,19 +154,23 @@ detect_audio_system() {
         fi
     fi
 
-    # 2. Detect sound files — only if current paths don't exist
-    if [[ -f "${TOUCHPAD_DISABLED:-}" && -f "${TOUCHPAD_ENABLED:-}" ]]; then
-        return 0  # Already configured and valid, skip detection
-    fi
-
-    local -a sound_paths=(
-        "/usr/share/sounds/freedesktop/stereo"
-        "/usr/share/sounds/ubuntu/stereo"
+    local -a sound_paths
+    
+    sound_paths=(
+        "$HOME/.local/share/sounds"
+        "/usr/share/sounds/linuxmint/stereo"
+        "/usr/share/sounds/elementary/stereo"
+        "/usr/share/sounds/oxygen/stereo"
         "/usr/share/sounds/zorin/stereo"
-        "$HOME/.local/share/sounds/freedesktop/stereo"
+        "/usr/share/sounds/ubuntu/stereo"
+        "/usr/share/sounds/opensuse/stereo"
+        "/usr/share/sounds/freedesktop/stereo"
     )
 
-    local found=false
+    local found
+    
+    found=false
+    
     for dir in "${sound_paths[@]}"; do
         if [[ -f "$dir/device-removed.oga" && -f "$dir/device-added.oga" ]]; then
             TOUCHPAD_DISABLED="$dir/device-removed.oga"
@@ -200,7 +200,9 @@ detect_audio_system() {
 # ───── Dependency Check ───────────────────────────────────────────────
 
 check_dependencies() {
-    local -a tools=("gsettings" "realpath")
+    local -a tools
+    
+    tools=("gsettings" "realpath")
 
     # Only check audio player if it was detected/set
     if [[ -n "${AUDIO_PLAYER:-}" ]]; then
@@ -226,6 +228,7 @@ check_dependencies() {
 
 get_current_state() {
     gsettings get "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}"
+    log "GSettings: schema=${GSETTINGS_SCHEMA}, key=${GSETTINGS_KEY}"
 }
 
 
@@ -241,6 +244,7 @@ toggle_touchpad() {
     sleep 0.2
 
     local current_state
+    
     current_state=$(get_current_state)
     
     if [ "${current_state}" = "'enabled'" ]; then
@@ -249,11 +253,13 @@ toggle_touchpad() {
         log "▲ Touchpad disabled."
     else
         gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'enabled'"
-        "${AUDIO_PLAYER}" "${TOUCHPAD_ENABLED}" 
+        "${AUDIO_PLAYER}" "${TOUCHPAD_ENABLED}" &
         log "● Touchpad enabled."
     fi
 
-    check_state
+    check_touchpad_state
+    check_external_mouse
+    check_mouse_mode
     check_shortcut
     echo
 }
@@ -262,13 +268,72 @@ toggle_touchpad() {
 
 # ───── Check Touchpad Status ──────────────────────────────────────────
 
-check_state() {
+check_touchpad_state() {
     local state
+    
     state=$(get_current_state)
+    
     if [ "${state}" = "'enabled'" ]; then
         printf "$INFO_PAD   %b%b%b%b\n" "${MSG[info_status_label]}" "${INDICATOR_PASS}" "${MSG[info_enabled]}" "${FORMATTING_RESET}"
+    elif [ "${state}" = "'disabled-on-external-mouse'" ]; then
+        printf "$INFO_PAD   %b%b%b%b\n" "${MSG[info_status_label]}" "${INDICATOR_WARN}" "${MSG[info_conditional]}" "${FORMATTING_RESET}"
     else
         printf "$INFO_PAD   %b%b%b%b\n" "${MSG[info_status_label]}" "${INDICATOR_CRIT}" "${MSG[info_disabled]}" "${FORMATTING_RESET}"
+    fi
+}
+
+
+
+# ───── Check Mouse Mode ──────────────────────────────────────────
+
+check_mouse_mode() {
+    local state
+    
+    state=$(get_current_state)
+    
+    if [ "${state}" = "'disabled-on-external-mouse'" ]; then
+        printf "$INFO_PAD   %b%b%b%b\n" "${MSG[mouse_mode_label]}" "${INDICATOR_PASS}" "${MSG[info_enabled]}" "${FORMATTING_RESET}"
+    else
+        printf "$INFO_PAD   %b%b%b%b\n" "${MSG[mouse_mode_label]}" "${INDICATOR_CRIT}" "${MSG[info_disabled]}" "${FORMATTING_RESET}"
+    fi
+}
+
+
+
+# ───── Check External Mouse ───────────────────────────────────────
+
+check_external_mouse() {
+    local has_mouse
+    
+    has_mouse=false
+
+    if [[ -f /proc/bus/input/devices ]]; then
+        while IFS= read -r line; do
+            if [[ "$line" == I:* ]]; then
+                # Extract Bus value
+                local bus
+                
+                bus=$(echo "$line" | grep -oP 'Bus=\K[0-9a-f]+')
+                # Remember bus for this device block
+                _current_bus="$bus"
+            elif [[ "$line" == H:* ]]; then
+                local handlers
+                
+                handlers="$line"
+                # USB = 0003, Bluetooth = 0005
+                if [[ ("$_current_bus" == "0003" || "$_current_bus" == "0005") \
+                      && "$handlers" == *"mouse"* ]]; then
+                    has_mouse=true
+                    break
+                fi
+            fi
+        done < /proc/bus/input/devices
+    fi
+
+    if [ "$has_mouse" = true ]; then
+        printf "$INFO_PAD   %b%b%b%b\n" "${MSG[mouse_status_label]}" "${INDICATOR_PASS}" "${MSG[info_detected]}" "${FORMATTING_RESET}"
+    else
+        printf "$INFO_PAD   %b%b%b%b\n" "${MSG[mouse_status_label]}" "${INDICATOR_CRIT}" "${MSG[info_not_detected]}" "${FORMATTING_RESET}"
     fi
 }
 
@@ -281,33 +346,34 @@ check_state() {
 check_shortcut() {
     # Returns exit code 0 (success) if found, exit code 1 (failure) if not found.
     # Also prints status to stdout.
-    local binding_list
+    local binding_list paths cmd
+    
     binding_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings)
 
-    # Clean the list format to iterate
-    local paths
+    # Clean the list format to iterate 
+    
     paths=$(echo "${binding_list}" | tr -d "[]'," | tr "," " ")
 
     for path in ${paths}; do
-        # Get the command associated with this custom binding
-        local cmd
+        # Get the command associated with this custom binding        
         cmd=$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${path}" command 2>/dev/null)
 
         # Check if the command matches OUR script path exactly
         if [[ "${cmd}" == *"${SCRIPT_PATH}"* ]]; then
             local current_binding
+            
             current_binding=$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${path}" binding)
 
             # Localized Output
-            printf "$INFO_PAD   %b%b%b → %b%b%b\n" "${MSG[check_status_label]}" "${INDICATOR_PASS}" "${MSG[check_assign]}" "${FORMATTING_RESET}" "${FORMATTING_BOLD}" "${current_binding}" "${FORMATTING_RESET}"
+            printf "$INFO_PAD   %b%b%b → %b%b%b\n" "${MSG[shortcut_status_label]}" "${INDICATOR_PASS}" "${MSG[check_assign]}" "${FORMATTING_RESET}" "${FORMATTING_BOLD}" "${current_binding}" "${FORMATTING_RESET}"
             log "● Keyboard shortcut assigned."
             return 0
         fi
     done
 
     # Localized Output
-    printf "%s   %b%s%b\n" "${MSG[check_status_label]}" "${INDICATOR_FAIL}" "${MSG[check_not_detected]}" "${FORMATTING_RESET}"
-    printf "%s\n" "${MSG[check_invoke_hint]}"
+    printf "$INFO_PAD   %b%s%b\n" "${MSG[shortcut_status_label]}" "${INDICATOR_FAIL}" "${MSG[info_not_detected]}" "${FORMATTING_RESET}"
+    #printf "%s\n" "${MSG[check_invoke_hint]}"
     log "■ Keyboard shortcut not detected"
     return 1
 }
@@ -323,20 +389,23 @@ remove_shortcut() {
     printf "%b%b%s\n\n" "${INDICATOR_INFO}" "${FORMATTING_RESET}" "${MSG[rem_preparing]}"
 
     # 1. Find the specific path associated with THIS script
-    local binding_list
-    binding_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings)
-    local paths
-    paths=$(echo "${binding_list}" | tr -d "[]'," | tr "," " ")
+    local binding_list paths path_to_remove cmd
+    
+    binding_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings) 
+    
+    paths=$(echo "${binding_list}" | tr -d "[]'," | tr "," " ") 
+    
+    path_to_remove=""
 
-    local path_to_remove=""
-
-    for path in ${paths}; do
-        local cmd
+    for path in ${paths}; do 
+        
         cmd=$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${path}" command 2>/dev/null)
 
         if [[ "${cmd}" == *"${SCRIPT_PATH}"* ]]; then
             path_to_remove="${path}"
+            
             local current_binding
+            
             current_binding=$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${path}" binding)
 
             # Localized Output
@@ -354,8 +423,10 @@ remove_shortcut() {
     fi
 
     # 3. Rebuild the list EXCLUDING the path to remove
-    local new_list="["
-    local is_first=true
+    local new_list is_first
+    
+    new_list="["
+    is_first=true
 
     for path in ${paths}; do
         if [ "${path}" != "${path_to_remove}" ]; then
@@ -400,14 +471,14 @@ assign_shortcut() {
         return
     fi
 
-    local timestamp
+    local timestamp new_path current_list new_list
+    
     timestamp=$(date +%s)
-    local new_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-touchpad-toggle-${timestamp}/"
+    new_path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-touchpad-toggle-${timestamp}/"
 
-    local current_list
-    current_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings)
-
-    local new_list=""
+    current_list=$(gsettings get "${MEDIA_KEYS_SCHEMA}" custom-keybindings) 
+    
+    new_list=""
     if [ "${current_list}" = "@as []" ]; then
         new_list="['${new_path}']"
     else
@@ -426,6 +497,36 @@ assign_shortcut() {
     printf "%b%b%s %b%b%b\n" "${INDICATOR_PASS}" "${FORMATTING_RESET}" "${MSG[assign_success]}" "${FORMATTING_BOLD}" "${KEY_BINDING}" "${FORMATTING_RESET}"
     printf "%b\n\n" "${MSG[assign_instructions]}"
     log "● Keyboard shortcut ${KEY_BINDING} assigned."
+}
+
+
+
+# ─── Toggle Mouse Mode ──────────────────────────────────────────────
+
+toggle_mouse_mode() {
+    local current_state
+    
+    current_state=$(get_current_state)
+    
+    log "● Mouse mode toggle requested. Current state: ${current_state}"
+    
+    if [ "${current_state}" = "'disabled-on-external-mouse'" ]; then
+        # Leave mouse mode → return to enabled
+        gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'enabled'"
+        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" &
+        log "▲ Mouse mode deactivated. Touchpad now enabled."
+    else
+        # Enter mouse mode
+        gsettings set "${GSETTINGS_SCHEMA}" "${GSETTINGS_KEY}" "'disabled-on-external-mouse'"
+        "${AUDIO_PLAYER}" "${TOUCHPAD_DISABLED}" &
+        log "▲ Mouse mode activated. Touchpad disabled-on-external-mouse."
+    fi
+    
+    check_touchpad_state
+    check_external_mouse
+    check_mouse_mode
+    check_shortcut
+    echo
 }
 
 
@@ -474,15 +575,17 @@ reset_input_subsystem() {
 # ───── Display Status and Config Information ──────────────────────────
 
 display_info() {
-
-    check_state
+    check_touchpad_state
+    check_external_mouse
+    check_mouse_mode
     check_shortcut
-
+    
     printf "\n%b\n" "${MSG[info_invoke]}"
     printf "├ $INFO_PAD %s %b%b%b\n" "--assign" "${MSG[info_desc_assign]}" "${FORMATTING_BOLD}" "${KEY_BINDING}" "${FORMATTING_RESET}"
     printf "├ $INFO_PAD %s%b\n" "--help" "${MSG[info_desc_help]}"
     printf "├ $INFO_PAD %s%b\n" "--reset" "${MSG[info_desc_reset]}"  
     printf "├ $INFO_PAD %s%b\n" "--toggle" "${MSG[info_desc_toggle]}"
+    printf "├ $INFO_PAD %s%b\n" "--mouse-mode" "${MSG[info_desc_mouse_mode]}"
     printf "├ $INFO_PAD %s%b\n" "--unassign" "${MSG[info_desc_remove]}"
     printf "├ $INFO_PAD %s%b\n" "--version" "${MSG[info_desc_version]}"
     printf "╰ $INFO_PAD %s%b\n\n" "--watch" "${MSG[info_opt_watch]}"
@@ -506,9 +609,9 @@ watch_script() {
 # ───── Show Version ───────────────────────────────────────────────────
 
 show_version() {
-    printf "  %-14s %s\n" "${MSG[info_version]}:" "$VERSION"
-    printf "  %-14s %s\n" "${MSG[info_build_date]}:" "$BUILD_DATE"
-    printf "  %-14s %s\n" "${MSG[info_path]}:" "$SCRIPT_PATH"
+    printf "  %-14s %s\n" "${MSG[info_version]}" "$VERSION"
+    printf "  %-14s %s\n" "${MSG[info_build_date]}" "$BUILD_DATE"
+    printf "  %-14s %s\n" "${MSG[info_path]}" "$SCRIPT_PATH"
     log "● Script version showed."
     exit 0
 }
@@ -525,14 +628,15 @@ check_dependencies
 # Check which option is provided
 
 case "$1" in
-    --assign)   assign_shortcut       ;;
-    --help)     show_help             ;;
-    --reset)    reset_input_subsystem ;;
-    --toggle)   toggle_touchpad       ;;
-    --unassign) remove_shortcut       ;;
-    --version)  show_version          ;;
-    --watch)    watch_script          ;;
-    *)          display_info
+    --assign)     assign_shortcut       ;;
+    --help)       show_help             ;;
+    --reset)      reset_input_subsystem ;;
+    --toggle)     toggle_touchpad       ;;
+    --mouse-mode) toggle_mouse_mode     ;;
+    --unassign)   remove_shortcut       ;;
+    --version)    show_version          ;;
+    --watch)      watch_script          ;;
+    *)            display_info
 esac
 
 exit 0

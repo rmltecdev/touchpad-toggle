@@ -3,19 +3,22 @@
 ```bash
 ≡ Touchpad Toggle ≡
  
-Touchpad status   ● Enabled
-Shortcut status   ● Assigned → '<Super>q'
+Touchpad        ▲ Conditional
+Mouse           ● Detected
+Mouse mode      ● Enabled
+Shortcut        ● Assigned → '<Super>q'
  
 Invoke touchpad-toggle with one of these options:
-├ --assign        Assign permanent keyboard shortcut; default: <Super>q
-├ --help          Show description, usage and license
-├ --reset         Hard reset input sub-system; elevated privileges required
-├ --toggle        Toggle touchpad enable/disable
-├ --unassign      Remove permanent keyboard shortcut
-├ --version       Show version metadata
-╰ --watch         Watch touchpad-toggle; updated every 2 seconds, quit with Ctrl+C
+├ --assign      Assign permanent keyboard shortcut; default: <Super>q
+├ --help        Show description, usage and license
+├ --reset       Hard reset input sub-system; elevated privileges required
+├ --toggle      Toggle touchpad enable/disable
+├ --mouse-mode  Toggle mouse mode enable/disable
+├ --unassign    Remove permanent keyboard shortcut
+├ --version     Show version information
+╰ --watch       Watch touchpad-toggle; updated every 2 seconds, quit with Ctrl+C
  
-  Script path     /home/martin/bin/touchpad-toggle
+  Script path   /home/martin/.local/bin/touchpad-toggle
 ```
 
 #### Table of Contents
@@ -32,21 +35,30 @@ Invoke touchpad-toggle with one of these options:
 ## Purpose
 
 *Touchpad Toggle* solves a common usability issue on laptops: accidental cursor movement or clicks while typing, which can displace the cursor and cause unintended text deletion or overwriting.  
-While many Desktop Environments offer touchpad toggle switches in settings, accessing them is cumbersome and slow. Touchpad Toggle provides instant mechanism to enable or disable the touchpad via a keyboard shortcut, accompanied by seamless audible feedback.  
+While many Desktop Environments offer touchpad toggle switches in settings, accessing them is cumbersome and slow. Touchpad Toggle provides instant mechanisms: a keyboard shortcut for quick enable/disable, and an intelligent "mouse mode" that automatically manages the touchpad based on whether an external mouse is connected or disconnected.  
+All accompanied by seamless audible and visual feedback.  
 
 ### Unique features include
 
-#### Self-managing keyboard shortcut
+#### Self-managing Keyboard Shortcut
 
 Install and remove global GNOME shortcut without manual GUI configuration.  
 
+#### Intelligent Mouse Mode
+
+Toggle automatic touchpad management: disables only when external mouse connected, re-enables on disconnect. Perfect for docking stations.  
+
 #### GNOME Shell Extension
 
-Optional visual indicator in the top bar showing real-time touchpad state (enabled, disabled, or external-mouse mode).  
+Optional top bar indicator showing real-time state (enabled, disabled, or mouse-conditional) with left/right-click actions.  
 
 #### Hard Reset Fallback
 
 If the touchpad stops responding due to hardware-layer freezes, recover via --reset with elevated privileges.  
+
+#### System Sounds Auto-detect
+
+Auto-detects audio players and sound themes across distributions.  
 
 #### Zero Bloat
 
@@ -64,8 +76,8 @@ Distinct sound cues confirm enabled vs. disabled state changes.
 
 #### Visual Indicator (Optional)
 
-GNOME top bar icon shows current state of touchpad and mouse mode without transient notifications.  
-The visual indicator can be displayed in color or monochrome via the GNOME extension settings.
+GNOME top bar indicator icon shows current state of touchpad and mouse mode without transient notifications.  
+The visual indicator can be displayed in color or monochrome via the GNOME extension settings.  
 
 ##### Known Limitations
 
@@ -118,8 +130,8 @@ The script operates on four main functional axes:
 **4. Localization**  
      Automatically detects the system language (`$LANG`) and serves interface text; currently in generic English, generic German, or Thai.  
 
-**5. Interactive GNOME Extension**  
-     This optional extension toggles touchpad enabled/disabled on left click. Right click activates mouse mode, which conveniently disables the touchpad when an external pointing device is detected by the system. When disconnecting the mouse, the touchpad will be enabled without user interaction.  
+**5. Intelligent Mouse Mode**  
+     Activates conditional state management: touchpad disabled-on-external-mouse with automatic re-enablement on device disconnect. The optional GNOME extension provides audio- visual status indicators and click-through interaction for all three modes. All functions operate with USB and Bluetooth devices likewise.  
 
 ## Code  
 
@@ -144,13 +156,17 @@ The default fallback language is generic English `[en]`.
 
 The `install.sh` script automates the installation procedure:  
 
+1.  Clone or download the repository  
+
 ```bash
-# Clone or download the repository
-git clone <repository-url>
-cd touchpad-toggle
+   git clone https://github.com/rmltecdev/touchpad-toggle
+   cd touchpad-toggle
+```
  
-# Run the installer
-./install.sh
+2. Run the installer  
+
+```bash
+   ./install.sh
 ```
 
 **Installer features**
@@ -165,39 +181,39 @@ Then **log out and log back in** for the extension to load.
 
 ### Manual installation
 
-**1. Make executable**  
+**1. Make script executable**  
      `chmod +x touchpad-toggle`
  
-**2. Copy to target directory**  
-     `cp touchpad-toggle ~/.local/bin/`
+**2. Copy script and localization files to target directory**  
+     `cp touchpad-toggle* ~/.local/bin/`
  
-**3. Copy localization files**  
-    `cp touchpad-toggle.* ~/.local/bin/`
- 
-**4. Assign keyboard shortcut**  
+**3. Assign keyboard shortcut**  
      `touchpad-toggle --assign`
 
 ### Post-Installation
-If you installed via `install.sh` and accepted the GNOME Shell extension, log out and log back in to load the extension.  
 
-**1. Audio Configuration (Advanced)**  
+**1. Audio Feedback**  
 
-   By default, the script auto-detects available sound files from standard Linux locations:  
+   The script and GNOME extension automatically detect sound files using a priority hierarchy:  
 
-   * `/usr/share/sounds/freedesktop/stereo/`
-   * `/usr/share/sounds/ubuntu/stereo/`
-   * `/usr/share/sounds/zorin/stereo/`
+   1. `~/.local/share/sounds/stereo/` — User-specific override  
+   2. Distribution themes (`linuxmint`, `elementary`, `oxygen`, `zorin`, `ubuntu`, `opensuse`)  
+   3. `/usr/share/sounds/freedesktop/stereo/` — Universal fallback  
+
+   No configuration required. Replace files in your local directory to customize.  
 
 **2. Custom Sound Files**  
 
-  To use custom sound files, uncomment and edit these variables near the top of the script:  
+  To use custom sound files, place them here:  
 
 ```bash
-    TOUCHPAD_DISABLED="/path/to/custom-disabled.oga"  
-    TOUCHPAD_ENABLED="/path/to/custom-enabled.oga"
+   mkdir -p ~/.local/share/sounds/stereo/
+   cp /path/to/custom-added.oga ~/.local/share/sounds/stereo/device-added.oga
+   cp /path/to/custom-removed.oga ~/.local/share/sounds/stereo/device-removed.oga
 ```
+Both the script and extension will automatically detect and prioritize these.  
 
-  Supported formats: `.oga`, `.ogg`, `.wav` (depending on your audio player).
+Supported formats: `.oga`, `.ogg`, `.wav` (depending on audio player).  
 
 ## Usage
 
@@ -210,13 +226,16 @@ The script is designed to run autonomously. Manual invocation provides status re
 #### Options
 
 * Invalid or no option  
-  Displays the current status of the touchpad and checks if the keyboard shortcut is assigned.  
+  Displays the current status of the touchpad, mouse mode, if a mouse (USB/Bluetooth) is detected, and checks if the keyboard shortcut is assigned.  
 
 * `./touchpad-toggle --assign`  
   Assigns a permanent keyboard shortcut (Default: `<Super>q`).  
 
 * `./touchpad-toggle --help`  
   Opens the manual page.  
+  
+* `./touchpad-toggle --mouse-mode`  
+  Toggles the mouse mode.
 
 * `./touchpad-toggle --reset`  
   Hard reset input sub-system (requires elevated privileges)  
@@ -235,13 +254,13 @@ The script is designed to run autonomously. Manual invocation provides status re
 
 #### Example Workflow
 
-**1. Install shortcut**  
+1. **Install shortcut**  
    Invoke `./touchpad-toggle --assign` to assign the keyboard shortcut.  
 
-**2. Toggle with keyboard**  
+2. **Toggle with keyboard**  
    Press `SuperKey+Q` (`WindowsKey+Q` or `MetaKey+Q`) to toggle the touchpad on/off.  
 
-**3. Check touchpad status anytime**  
+3. **Check touchpad status anytime**  
 
 ```bash
    touchpad-toggle
@@ -254,13 +273,15 @@ Touchpad Toggle includes an optional GNOME Shell extension providing a persisten
 
 * **Left-click**  
   Delegates to script → toggles touchpad with audible feedback.  
+
 * **Right-click**  
-  Cycles to/from "disabled-on-external-mouse" mode.  
+  Cycles to/from conditional "disabled-on-external-mouse" mode.  
+
 * **Icon States**  
   * Red touchpad icon: touchpad disabled;  
   * Blue touchpad icon: touchpad enabled;  
-  * Blue mouse icon: mouse mode, external device detected, touchpad disabled;  
-  * Teal mouse icon: mouse mode stand-by, external device not detected, touchpad enabled.  
+  * Blue mouse icon: mouse mode active; touchpad disabled while external device (USB/Bluetooth) detected;  
+  * Teal mouse icon: mouse mode stand-by; touchpad enabled while external device not detected.  
   
 * **Auto-update**  
   Reflects touchpad state changes made externally (keyboard shortcut, system settings, TUI).  
@@ -280,7 +301,7 @@ The script checks for `gsettings`, `realpath`, and an audio player (optional). I
 Alternatively, change the value of the variable `AUDIO_PLAYER="/usr/bin/paplay"` to the audio player already installed on your system.  
 
 #### Audio does not play
-Check the `AUDIO_PLAYER` variable path and ensure the sound files defined in `TOUCHPAD_ENABLED`/`DISABLED` actually exist.  
+Check the `AUDIO_PLAYER` variable path and ensure the sound files in the specified directories actually exist.  
 
 #### Shortcut doesn't work
 Invoke `./touchpad-toggle --assign` again. If it says "Assigned," check if another application is overriding `<Super>q`.  
@@ -322,6 +343,7 @@ This forces the shell to print every command and its expanded arguments to stand
 Following XDG Base Directory Specification, relevant script actions are logged to `~/.local/state/touchpad-toggle.log`. This includes:  
 
 * Touchpad toggle events (enable/disable)  
+* Mouse mode toggle events (enable/disable)  
 * Keyboard shortcut assignments and removals  
 * Input subsystem resets  
 * Audio player detection failures  
@@ -332,14 +354,15 @@ Following XDG Base Directory Specification, relevant script actions are logged t
 Touchpad-Toggle events are logged in this format:  
 
 ```bash
-[YYYY-MM-DD HH:MM:SS] [touchpad-toggle, vX.Y.Z] Message
+   [YYYY-MM-DD HH:MM:SS] [touchpad-toggle, vX.Y.Z] Message
 ```
 
 **Example**
 
 ```bash
-[2026-08-01 17:45:33] [touchpad-toggle, v1.0.0] Keyboard shortcut <Super>q assigned.
-[2026-08-01 17:45:32] [touchpad-toggle, v1.0.0] Touchpad disabled.
+   [2026-08-22 23:02:09] [touchpad-toggle, v1.2.0] ● Keyboard shortcut assigned.
+   [2026-08-22 23:13:53] [touchpad-toggle, v1.2.0] ● Touchpad enabled.
+   [2026-08-22 23:24:04] [touchpad-toggle, v1.2.0] ● Mouse mode toggle requested. Current state: 'disabled-on-external-mouse'
 ```
 
 #### Useful Commands
@@ -359,7 +382,7 @@ Touchpad-Toggle events are logged in this format:
 * Rotate/clear logs (optional):  
 
 ```bash
-   ~/.local/state/touchpad-toggle/touchpad-toggle.log
+   ~/.local/state/touchpad-toggle.log
 ```
 
 #### Privacy Note
@@ -398,5 +421,5 @@ Licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
 ### Version
 
-Version: 1.1.2  
-Build Date: 2026-08-13  
+Version: 1.2.0  
+Build Date: 2026-08-22  

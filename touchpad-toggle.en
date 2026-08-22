@@ -49,6 +49,7 @@ USAGE
         (none/invalid)  Show current status of touchpad and keyboard shortcut
         --assign        Assign permanent keyboard shortcut
         --help          Show this help
+        --mouse-mode    Toggle mouse mode enable/disable
         --reset         Hard reset input drivers; elevated privileges
                         required
         --toggle        Toggle touchpad enable/disable
@@ -72,7 +73,7 @@ LICENSE
 EOF
 
 # Mathematically inflate padding to align with longest string
-INFO_PAD="%-15s"
+INFO_PAD="%-13s"
 
 # Associative array to map keys to localized strings
 MSG[assign_abort_msg]="  A keyboard shortcut has already been assigned to toggle touchpad\n  enable/disable. Invoke script without option to see details."
@@ -82,29 +83,33 @@ MSG[assign_preparing]="Assigning keyboard shortcut..."
 MSG[assign_success]="Keyboard shortcut successfully assigned to"
 MSG[check_assign]="Assigned"
 MSG[check_invoke_hint]="Invoke ${SCRIPT_NAME} with option --assign to assign a permanent keyboard shortcut."
-MSG[check_not_detected]="Not detected"
-MSG[check_status_label]="Shortcut status"
 MSG[error_no_audio]="No audio system detected."
 MSG[error_tool]="Required system component is not installed:"
 MSG[help_close]="Help closed."
 MSG[help_open]="Opening help..."
 MSG[help_text]="$MSG_HELP_TEXT"
 MSG[info_build_date]="Build date"
+MSG[info_conditional]="Conditional"
 MSG[info_desc_assign]="Assign permanent keyboard shortcut; default:"
 MSG[info_desc_help]="Show description, usage and license"
+MSG[info_desc_mouse_mode]="Toggle mouse mode enable/disable"
 MSG[info_desc_remove]="Remove permanent keyboard shortcut"
 MSG[info_desc_reset]="Hard reset input sub-system; elevated privileges required"
 MSG[info_desc_toggle]="Toggle touchpad enable/disable"
 MSG[info_desc_version]="Show version information"
+MSG[info_detected]="Detected"
 MSG[info_disabled]="Disabled"
 MSG[info_enabled]="Enabled"
+MSG[info_not_detected]="Not detected"
 MSG[info_opt_watch]="Watch ${SCRIPT_NAME}; updated every ${WATCH_INTERVAL} seconds, quit with Ctrl+C"
 MSG[info_path]="Script path"
-MSG[info_status_label]="Touchpad status"
+MSG[info_status_label]="Touchpad"
 MSG[info_invoke]="Invoke ${SCRIPT_NAME} with one of these options:"
 MSG[info_version]="Version"
 MSG[install_hint]="Install it, or the package providing it,\n  with \033[1msudo apt-get install"
 MSG[keyb_manager]="Keyboard Shortcut Manager"
+MSG[mouse_status_label]="Mouse"
+MSG[mouse_mode_label]="Mouse mode"
 MSG[rem_found]="Found shortcut to remove:"
 MSG[rem_not_found]="No shortcut found."
 MSG[rem_nothing]="Nothing to remove."
@@ -116,8 +121,9 @@ MSG[reset_confirm_warning]="This operation will reset ALL input devices (keyboar
 MSG[reset_fail]="Resetting input subsystem failed."
 MSG[reset_preparing]="Resetting input subsystem (Hard Reset)..."
 MSG[reset_success]="Input subsystem successfully reset."
+MSG[shortcut_status_label]="Shortcut"
 MSG[sudo_required]="Elevated privileges (sudo) are required for this operation."
 MSG[warn_no_sound]="No system sounds detected."
-MSG[warn_no_sound_hint]="Sound feedback unavailable; toggle functionality unaffected.\nYou may configure custom sound paths in the script variables."
+MSG[warn_no_sound_hint]="Sound feedback unavailable; toggle functionality unaffected.\nPlace sound files in ~/.local/share/sounds/stereo/ to enable audio cues."
 MSG[watch_start]="Watching ${SCRIPT_PATH} with interval of ${WATCH_INTERVAL} seconds...\n"
 MSG[watch_stop]="Watching ended.\n\n"

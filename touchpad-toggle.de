@@ -43,15 +43,16 @@ ANFORDERUNGEN
     erkannt. Systemklänge zum Deaktivieren und Aktivieren des Touchpads.
 
 KONFIGURATION
-    Standard-Tastenkombination: ${KEY_BINDING}
+    Standard-Tastenkombination  ${KEY_BINDING}
 
 NUTZUNG
     ${SCRIPT_NAME} [OPTION]
 
     OPTIONEN
         (ohne/ungültig)  Aktuellen Status und Tastenkombination anzeigen
-        --help           Diese Hilfe anzeigen.
         --assign         Permanente Tastenkombination zuweisen.
+        --help           Diese Hilfe anzeigen.
+        --mouse-mode     Mausmodus aktivieren/deaktivieren
         --reset          Eingabe-Subsystem zurücksetzen; erhöhte
                          Privilegien erforderlich.
         --toggle         Touchpad aktivieren/deaktivieren.
@@ -85,22 +86,24 @@ MSG[assign_preparing]="Bereite Zuweisung der Tastenkombination vor..."
 MSG[assign_success]="Tastenkombination erfolgreich zugewiesen:"
 MSG[check_assign]="Zugewiesen"
 MSG[check_invoke_hint]="Rufen Sie ${SCRIPT_NAME} mit dem Option --assign auf um eine permanente Tastenkombination zuzuweisen."
-MSG[check_not_detected]="Nicht erkannt"
-MSG[check_status_label]="Tastenkombination"
 MSG[error_no_audio]="Kein Audiosystem erkannt."
 MSG[error_tool]="Erforderliche Systemkomponente nicht installiert:"
 MSG[help_close]="Hilfe geschlossen."
 MSG[help_open]="Öffne Hilfe..."
 MSG[help_text]="$MSG_HELP_TEXT"
 MSG[info_build_date]="Build-Datum"
+MSG[info_conditional]="Bedingt"
 MSG[info_desc_assign]="Weist permanente Tastenkombination zu; Voreinstellung:"
 MSG[info_desc_help]="Zeigt Beschreibung, Benutzung und Lizenz"
+MSG[info_desc_mouse_mode]="Aktiviert/deaktiviert den Mausmodus"
 MSG[info_desc_remove]="Entfernt permanente Tastenkombination"
 MSG[info_desc_reset]="Setzt Eingabe-Subsystem zurück; erhöhte Privilegien erforderlich"
 MSG[info_desc_toggle]="Aktiviert/deaktiviert das Touchpad"
 MSG[info_desc_version]="Versionsinformationen anzeigen"
+MSG[info_detected]="Erkannt"
 MSG[info_disabled]="Inaktiv"
 MSG[info_enabled]="Aktiv"
+MSG[info_not_detected]="Nicht erkannt"
 MSG[info_opt_watch]="${SCRIPT_NAME} überwachen; wird alle ${WATCH_INTERVAL} Sekunden aktualisiert; mit Strg+C beenden"
 MSG[info_path]="Skript-Pfad"
 MSG[info_status_label]="Touchpad Status"
@@ -108,6 +111,8 @@ MSG[info_invoke]="Rufen Sie ${SCRIPT_NAME} mit einem dieser Optionen auf:"
 MSG[info_version]="Version"
 MSG[install_hint]="Installieren Sie die Komponente, oder das Paket, dass sie enthält,\n  mit \033[1msudo apt install"
 MSG[keyb_manager]="Tastenkombinations-Manager"
+MSG[mouse_status_label]="Maus"
+MSG[mouse_mode_label]="Mausmodus"
 MSG[rem_found]="Tastenkombination zum Entfernen gefunden:"
 MSG[rem_not_found]="Keine Tastenkombination gefunden."
 MSG[rem_nothing]="Nichts zu entfernen."
@@ -119,8 +124,9 @@ MSG[reset_confirm_warning]="Diese Operation setzt ALLE Eingabegeräte zurück (T
 MSG[reset_fail]="Zurücksetzen des Eingabe-Subsystems gescheitert."
 MSG[reset_preparing]="Setze Eingabe-Subsystem zurück..."
 MSG[reset_success]="Eingabe-Subsystem erfolgreich zurückgesetzt."
+MSG[shortcut_status_label]="Tastenkombination"
 MSG[sudo_required]="Erhöhte Berechtigungen (sudo) sind für diese Operation erforderlich."
-MSG[warn_no_sound]="Keine Systemklänge erkannt."
-MSG[warn_no_sound_hint]=""
+MSG[warn_no_sound]="Systemklangdateien nicht gefunden."
+MSG[warn_no_sound_hint]="Sound-Feedback nicht verfügbar; Toggle-Funktion nicht beeinträchtigt.\nKlangdateien in ~/.local/share/sounds/stereo/ ablegen, um Audio-Feedback zu aktivieren."
 MSG[watch_start]="Beobachte ${SCRIPT_PATH} im Interval von ${WATCH_INTERVAL} Sekunden...\n"
 MSG[watch_stop]="Beobachten beendet.\n\n"

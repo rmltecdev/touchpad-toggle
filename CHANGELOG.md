@@ -5,6 +5,21 @@ All notable changes to `touchpad-toggle` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-22
+
+### Added
+* **`--mouse-mode` CLI option** — Toggle disabled-on-external-mouse state from command line
+* **Multi-distribution sound detection** — Extended audio path array with Linux Mint, elementary OS, KDE Oxygen, openSUSE, and freedesktop fallback
+* **Extension audio feedback for mouse events** — System sounds played on USB/Bluetooth mouse connect/disconnect
+
+### Changed
+* **Unified audio detection** — Both script and extension now use identical priority-based sound file discovery (user → distribution → freedesktop fallback)
+* **Icon color scheme** — External-mouse states differentiated: blue (active, mouse detected) vs. teal (standby, no mouse)
+* **Watch interval** — Updated display text to reflect periodic updates
+
+### Removed
+* **Hardcoded sound file paths** — Eliminated `TOUCHPAD_DISABLED` and `TOUCHPAD_ENABLED` default variables; auto-detection array is now the single source of truth, ensuring consistent audio feedback across script and extension
+
 ## [1.1.2] - 2026-08-13
 
 ### Fixed

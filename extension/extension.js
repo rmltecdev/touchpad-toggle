@@ -26,6 +26,7 @@ const TOUCHPAD_SCHEMA  = 'org.gnome.desktop.peripherals.touchpad';
 const TOUCHPAD_KEY     = 'send-events';
 const EXTENSION_SCHEMA = 'org.gnome.shell.extensions.touchpad-toggle';
 
+// Placeholder — replaced by installer with actual script path
 const SCRIPT_PATH = '__SCRIPT_PATH__';
 
 // ─── Icons ───────────────────────────────────────────────────────
@@ -37,10 +38,10 @@ const ICON_EXTERNAL_MOUSE = 'input-mouse-symbolic';
 // ─── Colors ───────────────────────────────────────────────────────
 
 const COLORS = {
-    disabled:           '#FF3A3F',  // red  — touchpad deliberately disabled
-    enabled:            '#0780DA',  // blue — touchpad enabled
-    external_active:    '#0780DA',  // blue — mouse detected, touchpad disabled
-    external_standby:   '#0CA5A5',  // teal — mouse mode standby, no mouse detected
+    enabled:         '#0780DA',  // blue   — touchpad active
+    disabled:        '#FF3A3F',  // red    — deliberately disabled
+    external_standby:'#0CA5A5',  // teal   — mouse mode standby, no mouse detected
+    external_active: '#0780DA',  // blue   — mouse detected, auto-managed
 };
 
 // ─── Panel Button ────────────────────────────────────────────────
@@ -51,10 +52,12 @@ class TouchpadIndicator extends PanelMenu.Button {
     _init(extSettings) {
         super._init(0.0, 'Touchpad Toggle', true);
 
+        // 1. GSettings initialisieren
         this._settings = new Gio.Settings({
             schema_id: TOUCHPAD_SCHEMA,
         });
 
+        // Extension preferences — passed from Extension class
         this._ext_settings = extSettings;
 
         this._icon = new St.Icon({
@@ -65,11 +68,13 @@ class TouchpadIndicator extends PanelMenu.Button {
 
         this._externalMousePresent = false;
 
+        // React to touchpad state changes (keyboard shortcut, settings, …)
         this._settingsId = this._settings.connect(
             `changed::${TOUCHPAD_KEY}`,
             () => this._updateIcon(),
         );
 
+        // React to color preference changes
         this._extSettingsId = this._ext_settings.connect(
             'changed::colored-icons',
             () => this._updateIcon(),
@@ -94,11 +99,17 @@ class TouchpadIndicator extends PanelMenu.Button {
             this._seat = null;
         }
 
+        // Handle clicks
         this._clickId = this.connect(
             'button-press-event',
             this._onButtonPress.bind(this),
         );
 
+        // ── Audio & Sound Initialization ──────────────────────────
+        this._detectAudioPlayer();
+        this._detectSoundFiles();
+
+        // Initial state
         this._refreshExternalMouse();
         this._updateIcon();
     }
@@ -110,13 +121,108 @@ class TouchpadIndicator extends PanelMenu.Button {
         return this._settings.get_string(TOUCHPAD_KEY);
     }
 
-    // ── External mouse detection ─────────────────────────────────
+    // ── Sound Discovery (mirrors bash detect_audio_system) ────────
+
+    _detectSoundFiles() {
+        const homeDir = GLib.get_home_dir();
+
+        const soundDirs = [
+            `${homeDir}/.local/share/sounds`,
+            '/usr/share/sounds/linuxmint/stereo',
+            '/usr/share/sounds/elementary/stereo',
+            '/usr/share/sounds/oxygen/stereo',
+            '/usr/share/sounds/zorin/stereo',
+            '/usr/share/sounds/ubuntu/stereo',
+            '/usr/share/sounds/opensuse/stereo', 
+            '/usr/share/sounds/freedesktop/stereo',            
+        ];
+
+        for (const dir of soundDirs) {
+            const disabledPath = GLib.build_filenamev([dir, 'device-removed.oga']);
+            const enabledPath  = GLib.build_filenamev([dir, 'device-added.oga']);
+
+            if (GLib.file_test(disabledPath, GLib.FileTest.EXISTS) &&
+                GLib.file_test(enabledPath, GLib.FileTest.EXISTS)) {
+                this._soundDisabled = disabledPath;
+                this._soundEnabled   = enabledPath;
+                log(`Touchpad Toggle: sounds found in ${dir}`);
+                return true;
+            }
+
+            // Fallback: single "complete" sound
+            const completePath = GLib.build_filenamev([dir, 'complete.oga']);
+            if (GLib.file_test(completePath, GLib.FileTest.EXISTS)) {
+                this._soundDisabled = completePath;
+                this._soundEnabled   = completePath;
+                log(`Touchpad Toggle: single sound file found: ${completePath}`);
+                return true;
+            }
+        }
+
+        log('Touchpad Toggle: no sound files found, audio feedback disabled');
+        this._soundDisabled = null;
+        this._soundEnabled   = null;
+        return false;
+    }
+
+    // ── Audio Player Detection ────────────────────────────────────
+    // FIX: Uint8Array → String Dekodierung hinzugefügt
+
+    _detectAudioPlayer() {
+        const players = ['pw-play', 'paplay', 'aplay'];
+        const decoder = new TextDecoder();
+
+        for (const player of players) {
+            try {
+                const [ok, stdout, _stderr, exitCode] = GLib.spawn_command_line_sync(
+                    `which ${player}`
+                );
+                if (ok && exitCode === 0) {
+                    // CRITICAL FIX: Uint8Array to String
+                    const path = decoder.decode(stdout).trim();
+                    if (path.length > 0) {
+                        this._audioPlayer = path;
+                        log(`Touchpad Toggle: audio player detected: ${path}`);
+                        return true;
+                    }
+                }
+            } catch (e) {
+                // player not available, try next
+            }
+        }
+
+        log('Touchpad Toggle: no audio player detected');
+        this._audioPlayer = null;
+        return false;
+    }
+
+    // ── Play Sound Helper ─────────────────────────────────────────
+
+    _playSound(soundFile) {
+        if (!this._audioPlayer || !soundFile) {
+            log(`Touchpad Toggle DEBUG: _playSound() ABORTED — audioPlayer=${!!this._audioPlayer}, soundFile=${!!soundFile}`);
+            return;
+        }
+
+        const cmd = `${this._audioPlayer} "${soundFile}"`;
+        log(`Touchpad Toggle DEBUG: executing sound command: ${cmd}`);
+
+        try {
+            GLib.spawn_command_line_async(cmd);
+            log(`Touchpad Toggle DEBUG: sound spawn successful`);
+        } catch (e) {
+            log(`Touchpad Toggle: sound playback failed: ${e}`);
+        }
+    }
+
+    // ── External Mouse Detection ──────────────────────────────────
 
     _detectExternalMouse() {
         if (!this._seat) return false;
 
         let externalVendors = new Set();
 
+        // 1. Parse /proc/bus/input/devices to identify external bus types
         try {
             const [ok, contents] = GLib.file_get_contents('/proc/bus/input/devices');
             if (ok) {
@@ -133,6 +239,7 @@ class TouchpadIndicator extends PanelMenu.Button {
                         const vendor = vendorMatch[1].toLowerCase();
                         const handlers = handlersMatch[1];
 
+                        // USB (0003) or Bluetooth (0005) with mouse handler
                         if ((bus === '0003' || bus === '0005') && handlers.includes('mouse')) {
                             externalVendors.add(vendor);
                         }
@@ -140,9 +247,10 @@ class TouchpadIndicator extends PanelMenu.Button {
                 }
             }
         } catch (e) {
-            return false;
+            log(`Touchpad Toggle: /proc/bus/input/devices read failed: ${e}`);
         }
 
+        // 2. Enumerate devices via Seat API and cross-reference vendors
         try {
             const devices = this._seat.list_devices();
             if (!devices || devices.length === 0) return false;
@@ -150,13 +258,14 @@ class TouchpadIndicator extends PanelMenu.Button {
             for (let i = 0; i < devices.length; i++) {
                 if (devices[i].get_device_type() === Clutter.InputDeviceType.POINTER_DEVICE) {
                     const vendor = (devices[i].get_vendor_id?.() ?? '').toLowerCase();
+                    // Vendor '0' or empty means internal (touchpad companion pointer)
                     if (vendor && vendor !== '0' && vendor !== '' && externalVendors.has(vendor)) {
                         return true;
                     }
                 }
             }
         } catch (e) {
-            return false;
+            log(`Touchpad Toggle: device enumeration failed: ${e}`);
         }
 
         return false;
@@ -166,14 +275,35 @@ class TouchpadIndicator extends PanelMenu.Button {
         const wasPresent = this._externalMousePresent;
         this._externalMousePresent = this._detectExternalMouse();
 
+        // Nur Icon aktualisieren, wenn sich der Zustand geändert hat
+        // UND wir im "external-mouse"-Modus sind.
         if (wasPresent !== this._externalMousePresent &&
             this._getState() === 'disabled-on-external-mouse') {
             this._updateIcon();
         }
     }
 
+    // ── Device Change Handler ─────────────────────────────────────
+    // FIXED: Sound nur bei tatsächlicher Statusänderung
+
     _onDeviceChanged() {
+        const wasPresent = this._externalMousePresent;
         this._refreshExternalMouse();
+
+        // Only play sound when state ACTUALLY changed
+        if (wasPresent !== this._externalMousePresent) {
+            log(`Touchpad Toggle DEBUG: _onDeviceChanged() — mouse state changed: ${wasPresent} → ${this._externalMousePresent}`);
+            
+            if (this._externalMousePresent) {
+                log(`Touchpad Toggle DEBUG: playing device-added sound`);
+                this._playSound(this._soundEnabled);
+            } else {
+                log(`Touchpad Toggle DEBUG: playing device-removed sound`);
+                this._playSound(this._soundDisabled);
+            }
+        } else {
+            log(`Touchpad Toggle DEBUG: _onDeviceChanged() — no state change, ignoring`);
+        }
     }
 
     // ── Icon update ──────────────────────────────────────────────
@@ -208,31 +338,31 @@ class TouchpadIndicator extends PanelMenu.Button {
         this._icon.set_style(useColors && color ? `color: ${color} !important;` : '');
     }
 
-    // ── Click handler ──────────────────────────────────────────
+    // ── Click handler ────────────────────────────────────────────
 
     _onButtonPress(_actor, event) {
         const button = event.get_button();
 
         if (button === Clutter.BUTTON_PRIMARY) {
+            // Left-click → toggle touchpad
             try {
                 GLib.spawn_command_line_async(`'${SCRIPT_PATH}' --toggle`);
             } catch (e) {
                 log(`Touchpad Toggle: failed to launch script: ${e}`);
             }
         } else if (button === Clutter.BUTTON_SECONDARY) {
-            const current = this._getState();
-
-            if (current === 'disabled-on-external-mouse') {
-                this._settings.set_string(TOUCHPAD_KEY, 'disabled');
-            } else {
-                this._settings.set_string(TOUCHPAD_KEY, 'disabled-on-external-mouse');
+            // Right-click → delegate to script --mouse-mode
+            try {
+                GLib.spawn_command_line_async(`'${SCRIPT_PATH}' --mouse-mode`);
+            } catch (e) {
+                log(`Touchpad Toggle: failed to launch script: ${e}`);
             }
         }
 
         return Clutter.EVENT_STOP;
     }
 
-    // ── Cleanup ─────────────────────────────────────────────────
+    // ── Cleanup ──────────────────────────────────────────────────
 
     destroy() {
         if (this._settingsId) {
@@ -259,6 +389,9 @@ class TouchpadIndicator extends PanelMenu.Button {
         this._settings = null;
         this._ext_settings = null;
         this._seat = null;
+        this._audioPlayer = null;
+        this._soundDisabled = null;
+        this._soundEnabled = null;
 
         super.destroy();
     }

@@ -41,7 +41,7 @@ read -r -d '' MSG_HELP_TEXT <<EOF
     เตือนของระบบเมื่อเปิดหรือปิดการใช้งานทัชแพด
 
 การตั้งค่า
-    การผูกคีย์เริ่มต้น          ${KEY_BINDING}
+    การผูกคีย์เริ่มต้น      ${KEY_BINDING}
 
 การใช้งาน
     ${SCRIPT_NAME} [ตัวเลือก]
@@ -50,11 +50,12 @@ read -r -d '' MSG_HELP_TEXT <<EOF
         (ไม่มี/ไม่ถูกต้อง)  แสดงสถานะปัจจุบันของทัชแพดและแป้นพิมพ์ลัด
         --assign       ตั้งค่าแป้นพิมพ์ลัดถาวร
         --help         แสดงวิธีใช้
+        --mouse-mode   สลับการเปิด/ปิดใช้งานโหมดเมาส์
         --reset        รีเซ็ตไดรเวอร์อินพุตแบบบังคับ (ต้องใช้สิทธิ์ root)
         --toggle       สลับการเปิด/ปิดใช้งานทัชแพด
         --unassign     ลบแป้นพิมพ์ลัดเฉพาะของสคริปต์นี้
         --version      แสดงข้อมูลเมทาดาตาของเวอร์ชัน
-        --watch        แอป ${SCRIPT_NAME} จะอัปเดตทุก ${WATCH_INTERVAL} วินาที
+        --watch        เรียกใช้ ${SCRIPT_NAME} จะอัปเดตทุก ${WATCH_INTERVAL} วินาที
                        สามารถออกจากแอปได้โดยกด Ctrl+C
 
 ผู้เขียน
@@ -80,30 +81,34 @@ MSG[assign_instructions]="หากการใช้แป้นพิมพ์
 MSG[assign_preparing]="กำลังเตรียมปุ่มลัดแป้นพิมพ์..."
 MSG[assign_success]="ตั้งค่าปุ่มลัดแป้นพิมพ์สำเร็จแล้ว"
 MSG[check_assign]="กำหนดแล้ว"
-MSG[check_invoke_hint]="แอป ${SCRIPT_NAME} จะอัปเดตทุก ${WATCH_INTERVAL} วินาที สามารถออกจากแอปได้โดยกด Ctrl+C"
-MSG[check_not_detected]="ไม่พบ"
-MSG[check_status_label]="สถานะแป้นพิมพ์ลัด "
+MSG[check_invoke_hint]="เรียกใช้ ${SCRIPT_NAME} ด้วยตัวเลือก --assign เพื่อกำหนดปุ่มลัดแบบถาวร"
 MSG[error_no_audio]="ไม่พบระบบเสียง"
 MSG[error_tool]="ส่วนประกอบระบบที่จำเป็นไม่ได้ติดตั้ง"
 MSG[help_close]="ปิดหน้าช่วยเหลือแล้ว"
 MSG[help_open]="กำลังเปิดหน้าช่วยเหลือ..."
 MSG[help_text]="$MSG_HELP_TEXT"
-MSG[info_build_date]="วันที่สร้าง"
+MSG[info_build_date]="วันที่สร้าง       "
+MSG[info_conditional]="แบบมีเงื่อนไข"
 MSG[info_desc_assign]="ตั้งค่าปุ่มลัดถาวร การผิดสัญญา"
 MSG[info_desc_help]="แสดงคำอธิบาย การใช้งาน และใบอนุญาต"
+MSG[info_desc_mouse_mode]="สลับการเปิด/ปิดใช้งานโหมดเมาส์"
 MSG[info_desc_remove]="ลบทางลัดแป้นพิมพ์แบบถาวร"
 MSG[info_desc_reset]="รีเซ็ตไดรเวอร์อินพุตแบบบังคับ (ต้องใช้สิทธิ์ root)"
 MSG[info_desc_toggle]="สลับทัชแพด เปิดใช้งาน/ปิดใช้งาน"
 MSG[info_desc_version]="แสดงข้อมูลเวอร์ชัน"
+MSG[info_detected]="ตรวจพบ"
 MSG[info_disabled]="ปิดใช้งาน"
 MSG[info_enabled]="เปิดใช้งาน"
-MSG[info_opt_watch]="ดูแอป ${SCRIPT_NAME} จะอัปเดตเป็นระยะ สามารถออกจากแอปได้โดยกด Ctrl+C"
-MSG[info_path]="เส้นทางสคริปต์"
+MSG[info_not_detected]="ไม่ตรวจพบ"
+MSG[info_opt_watch]="เรียกใช้ ${SCRIPT_NAME} จะอัปเดตทุก ${WATCH_INTERVAL} วินาที สามารถออกจากแอปได้โดยกด Ctrl+C"
+MSG[info_path]="เส้นทางสคริปต์   "
 MSG[info_status_label]="สถานะทัชแพด    "
 MSG[info_invoke]="เรียกใช้สคริปต์ ${SCRIPT_NAME} ด้วยตัวเลือกเหล่านี้:"
-MSG[info_version]="เวอร์ชัน"
+MSG[info_version]="เวอร์ชัน        "
 MSG[install_hint]="ติดตั้งโปรแกรม หรือแพ็กเกจที่มาพร้อมกับโปรแกรมนั้น\n  ด้วยกับ \033[1msudo apt-get install"
 MSG[keyb_manager]="ตัวจัดการปุ่มลัดบนแป้นพิมพ์"
+MSG[mouse_status_label]="เมาส์          "
+MSG[mouse_mode_label]="โหมดเมาส์      "
 MSG[rem_found]="พบทางลัดในการลบ:"
 MSG[rem_not_found]="ไม่พบแป้นพิมพ์ลัด"
 MSG[rem_nothing]="ไม่มีอะไรต้องเอาออก"
@@ -115,8 +120,9 @@ MSG[reset_confirm_warning]="การดำเนินการนี้จะ�
 MSG[reset_fail]="การรีเซ็ตระบบย่อยอินพุตล้มเหลว"
 MSG[reset_preparing]="กำลังรีเซ็ตระบบย่อยการรับข้อมูล (Hard Reset)..."
 MSG[reset_success]="โหลดระบบรับข้อมูลใหม่เรียบร้อยแล้ว"
+MSG[shortcut_status_label]="สถานะแป้นพิมพ์ลัด "
 MSG[sudo_required]="จำเป็นต้องใช้สิทธิพิเศษ (sudo) สำหรับการดำเนินการนี้"
 MSG[warn_no_sound]="ไม่พบเสียงของระบบ"
-MSG[warn_no_sound_hint]=""
+MSG[warn_no_sound_hint]="ไม่มีระบบเสียงตอบรับ แต่การทำงานของฟังก์ชันยังคงเป็นปกติ\nหากต้องการเปิดใช้งานเสียงแจ้งเตือน ให้วางไฟล์เสียงไว้ที่ ~/.local/share/sounds/stereo/"
 MSG[watch_start]="กำลังรับชม ${SCRIPT_PATH} ด้วยช่วงเวลา ${WATCH_INTERVAL} วินาที...\n"
 MSG[watch_stop]="การรับชมสิ้นสุดลง\n\n"
