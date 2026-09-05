@@ -24,7 +24,7 @@
 
 
 # man-page style help
-read -r -d '' MSG_HELP_TEXT <<EOF
+read -r -d '' 'MSG[help_text]' <<EOF
 NAME
     Your Laptop's Touchpad Toggle
 
@@ -87,7 +87,6 @@ MSG[error_no_audio]="No audio system detected."
 MSG[error_tool]="Required system component is not installed:"
 MSG[help_close]="Help closed."
 MSG[help_open]="Opening help..."
-MSG[help_text]="$MSG_HELP_TEXT"
 MSG[info_build_date]="Build date"
 MSG[info_conditional]="Conditional"
 MSG[info_desc_assign]="Assign permanent keyboard shortcut; default:"

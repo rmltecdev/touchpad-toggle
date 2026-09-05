@@ -11,8 +11,8 @@ If your workflow deviates from the strict requirements listed below, this script
 [Hibernation, Sleep, and System Freeze](#hibernation--freezw)  
 [Keyboard Shortcuts & Conflicts](#keyboard)  
 [Audio Feedback & Localization](#audio--localization)  
-[Security & Privacy](security--privacy)  
-[Troubleshooting](troubleshooting)  
+[Security & Privacy](#security--privacy)  
+[Troubleshooting](#troubleshooting)  
 
 ## General & Philosophy
 
@@ -126,7 +126,10 @@ Some users find this behavior annoying if they frequently switch between mouse a
 
 #### Workaround
 
-* Use the GNOME Shell extension (if installed) to manually toggle "Mouse Mode" off.  
+To manually toggle "Mouse Mode" off:
+* Invoke the script with option `--mouse-mode`.  
+
+* Use the GNOME Shell extension (if installed).  
 
 * Alternatively, disable the automatic detection logic in the source code by commenting out the `/proc/bus/input/devices` polling section.  
 

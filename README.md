@@ -54,7 +54,7 @@ Optional top bar indicator showing real-time state (enabled, disabled, or mouse-
 
 #### Hard Reset Fallback
 
-If the touchpad stops responding due to hardware-layer freezes, recover via --reset with elevated privileges.  
+If the touchpad stops responding due to hardware-layer freezes, recover via `--reset` with elevated privileges.  
 
 #### System Sounds Auto-detect
 

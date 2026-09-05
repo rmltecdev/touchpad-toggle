@@ -24,7 +24,7 @@
 
 
 # man-page style help
-read -r -d '' MSG_HELP_TEXT <<EOF
+read -r -d '' 'MSG[help_text]' <<EOF
 ชื่อ
     Touchpad Toggle
     สลับทัชแพดของแล็ปท็อปของคุณ
@@ -86,7 +86,6 @@ MSG[error_no_audio]="ไม่พบระบบเสียง"
 MSG[error_tool]="ส่วนประกอบระบบที่จำเป็นไม่ได้ติดตั้ง"
 MSG[help_close]="ปิดหน้าช่วยเหลือแล้ว"
 MSG[help_open]="กำลังเปิดหน้าช่วยเหลือ..."
-MSG[help_text]="$MSG_HELP_TEXT"
 MSG[info_build_date]="วันที่สร้าง       "
 MSG[info_conditional]="แบบมีเงื่อนไข"
 MSG[info_desc_assign]="ตั้งค่าปุ่มลัดถาวร การผิดสัญญา"
